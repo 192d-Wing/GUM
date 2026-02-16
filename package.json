@@ -1,0 +1,39 @@
+{
+  "name": "crow-admin-ui",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@cloudscape-design/collection-hooks": "^1.0.0",
+    "@cloudscape-design/components": "^3.0.0",
+    "@cloudscape-design/design-tokens": "^3.0.0",
+    "@cloudscape-design/global-styles": "^1.0.0",
+    "@tanstack/react-query": "^5.90.0",
+    "@tanstack/react-query-devtools": "^5.90.0",
+    "axios": "^1.7.0",
+    "react": "^18.3.0",
+    "react-dom": "^18.3.0",
+    "react-router": "^7.13.0"
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
+    "@types/node": "^25.2.3",
+    "@types/react": "^18.3.0",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.0",
+    "jsdom": "^28.1.0",
+    "typescript": "^5.7.0",
+    "vite": "^6.0.0",
+    "vitest": "^4.0.18"
+  }
+}
