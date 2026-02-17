@@ -1,0 +1,5 @@
+# Frontend: run unit tests
+npx vitest run
+
+# Backend: run tests
+cd backend && cargo test

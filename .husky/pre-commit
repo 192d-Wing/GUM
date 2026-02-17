@@ -1,0 +1,8 @@
+# Frontend: lint and format staged files
+npx lint-staged
+
+# Frontend: type check
+npx tsc --noEmit
+
+# Backend: format check and lint
+cd backend && cargo fmt --check && cargo clippy -- -D warnings

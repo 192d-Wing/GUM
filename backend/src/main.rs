@@ -106,10 +106,8 @@ async fn main() {
     };
 
     // Rate limiter
-    let rate_limit_state = middleware::rate_limit::RateLimitState::new(
-        config.rate_limit,
-        config.rate_limit_window,
-    );
+    let rate_limit_state =
+        middleware::rate_limit::RateLimitState::new(config.rate_limit, config.rate_limit_window);
     if config.rate_limit > 0 {
         rate_limit_state.start_cleanup_task();
         tracing::info!(

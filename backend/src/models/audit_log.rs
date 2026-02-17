@@ -60,10 +60,7 @@ impl AuditLog {
         Ok(())
     }
 
-    pub async fn list(
-        pool: &SqlitePool,
-        query: &AuditLogQuery,
-    ) -> Result<Vec<AuditLog>, AppError> {
+    pub async fn list(pool: &SqlitePool, query: &AuditLogQuery) -> Result<Vec<AuditLog>, AppError> {
         let limit = query.limit.unwrap_or(50).min(200);
         let offset = query.offset.unwrap_or(0);
 
@@ -114,8 +111,8 @@ struct AuditLogRow {
 
 impl From<AuditLogRow> for AuditLog {
     fn from(row: AuditLogRow) -> Self {
-        let details =
-            serde_json::from_str(&row.details).unwrap_or(serde_json::Value::Object(Default::default()));
+        let details = serde_json::from_str(&row.details)
+            .unwrap_or(serde_json::Value::Object(Default::default()));
         Self {
             id: row.id,
             timestamp: row.timestamp,
@@ -157,13 +154,16 @@ mod tests {
         .await
         .unwrap();
 
-        let logs = AuditLog::list(&pool, &AuditLogQuery {
-            limit: None,
-            offset: None,
-            actor: None,
-            action: None,
-            resource_id: None,
-        })
+        let logs = AuditLog::list(
+            &pool,
+            &AuditLogQuery {
+                limit: None,
+                offset: None,
+                actor: None,
+                action: None,
+                resource_id: None,
+            },
+        )
         .await
         .unwrap();
 
@@ -177,20 +177,41 @@ mod tests {
     #[tokio::test]
     async fn list_filters_by_action() {
         let pool = test_pool().await;
-        AuditLog::record(&pool, "u", "U", "create", "deployment", "1", "a", &serde_json::json!({}))
-            .await
-            .unwrap();
-        AuditLog::record(&pool, "u", "U", "delete", "deployment", "1", "a", &serde_json::json!({}))
-            .await
-            .unwrap();
+        AuditLog::record(
+            &pool,
+            "u",
+            "U",
+            "create",
+            "deployment",
+            "1",
+            "a",
+            &serde_json::json!({}),
+        )
+        .await
+        .unwrap();
+        AuditLog::record(
+            &pool,
+            "u",
+            "U",
+            "delete",
+            "deployment",
+            "1",
+            "a",
+            &serde_json::json!({}),
+        )
+        .await
+        .unwrap();
 
-        let logs = AuditLog::list(&pool, &AuditLogQuery {
-            limit: None,
-            offset: None,
-            actor: None,
-            action: Some("delete".into()),
-            resource_id: None,
-        })
+        let logs = AuditLog::list(
+            &pool,
+            &AuditLogQuery {
+                limit: None,
+                offset: None,
+                actor: None,
+                action: Some("delete".into()),
+                resource_id: None,
+            },
+        )
         .await
         .unwrap();
 

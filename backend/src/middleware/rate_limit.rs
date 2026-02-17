@@ -84,7 +84,10 @@ pub async fn rate_limit(
         entry.0 += 1;
 
         if entry.0 > rl.limit {
-            let remaining = rl.window.as_secs().saturating_sub(now.duration_since(entry.1).as_secs());
+            let remaining = rl
+                .window
+                .as_secs()
+                .saturating_sub(now.duration_since(entry.1).as_secs());
             (false, remaining.max(1))
         } else {
             (true, 0)
@@ -124,6 +127,9 @@ mod tests {
     fn extract_ip_fallback_when_no_xff() {
         let req = Request::builder().body(()).unwrap();
         // No ConnectInfo or XFF → unspecified
-        assert_eq!(extract_ip(&req), IpAddr::V4(std::net::Ipv4Addr::UNSPECIFIED));
+        assert_eq!(
+            extract_ip(&req),
+            IpAddr::V4(std::net::Ipv4Addr::UNSPECIFIED)
+        );
     }
 }

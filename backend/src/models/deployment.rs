@@ -442,7 +442,9 @@ mod tests {
     #[tokio::test]
     async fn create_duplicate_name_returns_error() {
         let pool = test_pool().await;
-        Deployment::create(&pool, make_create_request("dup")).await.unwrap();
+        Deployment::create(&pool, make_create_request("dup"))
+            .await
+            .unwrap();
         let result = Deployment::create(&pool, make_create_request("dup")).await;
         assert!(result.is_err());
     }
@@ -464,10 +466,14 @@ mod tests {
     #[tokio::test]
     async fn update_health_sets_last_seen() {
         let pool = test_pool().await;
-        let d = Deployment::create(&pool, make_create_request("health-test")).await.unwrap();
+        let d = Deployment::create(&pool, make_create_request("health-test"))
+            .await
+            .unwrap();
         assert!(d.last_seen.is_none());
 
-        Deployment::update_health(&pool, &d.id, &HealthStatus::Healthy).await.unwrap();
+        Deployment::update_health(&pool, &d.id, &HealthStatus::Healthy)
+            .await
+            .unwrap();
         let updated = Deployment::get(&pool, &d.id).await.unwrap();
         assert!(updated.last_seen.is_some());
         assert_eq!(updated.health_status, HealthStatus::Healthy);
