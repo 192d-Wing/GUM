@@ -8,3 +8,9 @@ src/**/*.js
 backend/target/
 backend/*.db
 backend/*.db-*
+
+# Playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
