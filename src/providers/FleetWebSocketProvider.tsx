@@ -13,12 +13,19 @@ import type {
   DeploymentHealthSummary,
   HealthStatus,
 } from "../api/types";
+import { getReconnectDelay } from "../utils/backoff";
+
+import type { ConnectionStatus } from "./WebSocketProvider";
 
 interface FleetWsContextValue {
   connected: boolean;
+  connectionStatus: ConnectionStatus;
 }
 
-const FleetWsContext = createContext<FleetWsContextValue>({ connected: false });
+const FleetWsContext = createContext<FleetWsContextValue>({
+  connected: false,
+  connectionStatus: "disconnected",
+});
 
 /**
  * Envelope format from the fleet WebSocket endpoint.
@@ -31,8 +38,6 @@ interface FleetWsFrame {
   data: unknown;
 }
 
-const RECONNECT_DELAY = 5_000;
-
 /**
  * Fleet-level WebSocket provider that connects to `/api/v1/fleet/ws`.
  *
@@ -44,7 +49,9 @@ export function FleetWebSocketProvider({ children }: { children: ReactNode }) {
   const { isAuthenticated } = useAuth();
   const queryClient = useQueryClient();
   const wsRef = useRef<WebSocket | null>(null);
-  const [connected, setConnected] = useState(false);
+  const [connectionStatus, setConnectionStatus] =
+    useState<ConnectionStatus>("disconnected");
+  const attemptRef = useRef(0);
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -55,6 +62,8 @@ export function FleetWebSocketProvider({ children }: { children: ReactNode }) {
     function connect() {
       if (unmounted) return;
 
+      setConnectionStatus("connecting");
+
       const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
       const url = `${protocol}//${window.location.host}/api/v1/fleet/ws`;
 
@@ -62,13 +71,17 @@ export function FleetWebSocketProvider({ children }: { children: ReactNode }) {
       wsRef.current = ws;
 
       ws.onopen = () => {
-        if (!unmounted) setConnected(true);
+        if (!unmounted) {
+          attemptRef.current = 0;
+          setConnectionStatus("connected");
+        }
       };
 
       ws.onclose = () => {
         if (!unmounted) {
-          setConnected(false);
-          reconnectTimer = setTimeout(connect, RECONNECT_DELAY);
+          setConnectionStatus("disconnected");
+          const delay = getReconnectDelay(attemptRef.current++);
+          reconnectTimer = setTimeout(connect, delay);
         }
       };
 
@@ -130,12 +143,17 @@ export function FleetWebSocketProvider({ children }: { children: ReactNode }) {
       clearTimeout(reconnectTimer);
       wsRef.current?.close();
       wsRef.current = null;
-      setConnected(false);
+      setConnectionStatus("disconnected");
     };
   }, [isAuthenticated, queryClient]);
 
   return (
-    <FleetWsContext.Provider value={{ connected }}>
+    <FleetWsContext.Provider
+      value={{
+        connected: connectionStatus === "connected",
+        connectionStatus,
+      }}
+    >
       {children}
     </FleetWsContext.Provider>
   );

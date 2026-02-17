@@ -2,10 +2,13 @@ import TopNavigation from "@cloudscape-design/components/top-navigation";
 import type { TopNavigationProps } from "@cloudscape-design/components/top-navigation";
 import { useAuth } from "../providers/AuthProvider";
 import { useTheme } from "../providers/ThemeProvider";
+import { useFleetWsStatus } from "../providers/FleetWebSocketProvider";
+import ConnectionStatus from "./ConnectionStatus";
 
 export default function TopNav() {
   const { isAuthenticated, user, logout } = useAuth();
   const { mode, toggleMode } = useTheme();
+  const { connectionStatus } = useFleetWsStatus();
 
   const utilities: TopNavigationProps.Utility[] = [];
 
@@ -42,6 +45,18 @@ export default function TopNav() {
           overflowMenuTitleText: "All",
         }}
       />
+      {isAuthenticated && (
+        <div
+          style={{
+            position: "absolute",
+            top: 8,
+            right: 16,
+            zIndex: 1000,
+          }}
+        >
+          <ConnectionStatus status={connectionStatus} />
+        </div>
+      )}
     </div>
   );
 }
