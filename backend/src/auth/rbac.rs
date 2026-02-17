@@ -1,4 +1,5 @@
 use super::session::Session;
+use crate::error::AppError;
 
 /// Roles recognized by GUM.
 pub const ROLE_ADMIN: &str = "admin";
@@ -11,6 +12,15 @@ impl Session {
 
     pub fn is_admin(&self) -> bool {
         self.has_role(ROLE_ADMIN)
+    }
+
+    /// Returns `Ok(())` if the session has the admin role, `Err(Forbidden)` otherwise.
+    pub fn require_admin(&self) -> Result<(), AppError> {
+        if self.is_admin() {
+            Ok(())
+        } else {
+            Err(AppError::Forbidden("admin role required".into()))
+        }
     }
 }
 
@@ -53,5 +63,23 @@ mod tests {
         assert!(admin.is_admin());
         let non_admin = make_session(vec!["viewer".into()]);
         assert!(!non_admin.is_admin());
+    }
+
+    #[test]
+    fn require_admin_ok_for_admin() {
+        let s = make_session(vec!["admin".into()]);
+        assert!(s.require_admin().is_ok());
+    }
+
+    #[test]
+    fn require_admin_err_for_viewer() {
+        let s = make_session(vec!["viewer".into()]);
+        assert!(s.require_admin().is_err());
+    }
+
+    #[test]
+    fn require_admin_err_for_empty_roles() {
+        let s = make_session(vec![]);
+        assert!(s.require_admin().is_err());
     }
 }

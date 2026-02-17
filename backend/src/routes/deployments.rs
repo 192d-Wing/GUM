@@ -42,6 +42,7 @@ async fn create_deployment(
     Extension(session): Extension<Session>,
     Json(req): Json<CreateDeploymentRequest>,
 ) -> Result<Json<Deployment>, AppError> {
+    session.require_admin()?;
     validate_deployment_input(&req.name, &req.endpoint_url, &req.tags)?;
     let deployment = Deployment::create(&state.db.pool, req).await?;
 
@@ -104,6 +105,7 @@ async fn update_deployment(
     Path(id): Path<String>,
     Json(req): Json<UpdateDeploymentRequest>,
 ) -> Result<Json<Deployment>, AppError> {
+    session.require_admin()?;
     // Validate provided fields
     if let Some(ref name) = req.name {
         if name.trim().is_empty() {
@@ -158,6 +160,7 @@ async fn delete_deployment(
     Extension(session): Extension<Session>,
     Path(id): Path<String>,
 ) -> Result<Json<serde_json::Value>, AppError> {
+    session.require_admin()?;
     // Get the deployment name before deleting for the audit log
     let deployment = Deployment::get(&state.db.pool, &id).await?;
     let name = deployment.name.clone();

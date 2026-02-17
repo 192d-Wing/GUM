@@ -7,6 +7,8 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 use tower::ServiceExt;
 
+use gum_backend::auth::oidc::OidcProviderMetadata;
+use gum_backend::auth::session::Session;
 use gum_backend::{AppState, config, db};
 
 /// Build a test app with in-memory SQLite and stub auth (OIDC disabled).
@@ -408,4 +410,221 @@ async fn update_empty_name_returns_400() {
         .unwrap();
     let (status, _) = send(app, req).await;
     assert_eq!(status, StatusCode::BAD_REQUEST);
+}
+
+// ─── RBAC enforcement ───────────────────────────────────────────────
+
+/// Build a test app with OIDC enabled so sessions come from cookies.
+async fn test_app_oidc() -> (Router, Arc<AppState>) {
+    let db = db::Db::connect("sqlite::memory:").await.unwrap();
+    db.migrate().await.unwrap();
+
+    let config = config::AppConfig {
+        host: "127.0.0.1".into(),
+        port: 4000,
+        database_url: "sqlite::memory:".into(),
+        oidc: config::OidcConfig::default(),
+        session_secret: "test-secret-key-32-bytes-long!!!".into(),
+        static_dir: String::new(),
+        health_poll_interval: 0,
+        allowed_origins: Vec::new(),
+        max_body_size: 2 * 1024 * 1024,
+        rate_limit: 0,
+        rate_limit_window: 60,
+    };
+
+    let state = Arc::new(AppState {
+        db,
+        http_client: reqwest::Client::new(),
+        config,
+        session_key: b"test-secret-key-32-bytes-long!!!".to_vec(),
+        oidc_metadata: Some(OidcProviderMetadata {
+            issuer: "https://test.example.com".into(),
+            authorization_endpoint: "https://test.example.com/auth".into(),
+            token_endpoint: "https://test.example.com/token".into(),
+            userinfo_endpoint: None,
+        }),
+        oidc_pending: RwLock::new(std::collections::HashMap::new()),
+    });
+
+    let app = gum_backend::routes::api_routes(state.clone()).with_state(state.clone());
+    (app, state)
+}
+
+/// Create a signed session cookie for the given roles.
+fn session_cookie(roles: Vec<&str>) -> String {
+    let session = Session::new(
+        "test-user".into(),
+        "Test User".into(),
+        "test@example.com".into(),
+        roles.into_iter().map(String::from).collect(),
+    );
+    let key = b"test-secret-key-32-bytes-long!!!";
+    let value = session.encode(key).unwrap();
+    format!("gum_session={value}")
+}
+
+#[tokio::test]
+async fn viewer_cannot_create_deployment() {
+    let (app, _) = test_app_oidc().await;
+    let body = json!({
+        "name": "test",
+        "service_type": "crow_dns",
+        "endpoint_url": "http://localhost:9999"
+    });
+    let req = Request::builder()
+        .method("POST")
+        .uri("/api/v1/deployments")
+        .header("content-type", "application/json")
+        .header("cookie", session_cookie(vec!["viewer"]))
+        .body(Body::from(serde_json::to_vec(&body).unwrap()))
+        .unwrap();
+    let (status, json) = send(app, req).await;
+    assert_eq!(status, StatusCode::FORBIDDEN);
+    assert!(json["error"].as_str().unwrap().contains("admin"));
+}
+
+#[tokio::test]
+async fn viewer_cannot_update_deployment() {
+    let (app, _) = test_app_oidc().await;
+    // Create as admin
+    let body = json!({
+        "name": "test",
+        "service_type": "crow_dns",
+        "endpoint_url": "http://localhost:9999"
+    });
+    let req = Request::builder()
+        .method("POST")
+        .uri("/api/v1/deployments")
+        .header("content-type", "application/json")
+        .header("cookie", session_cookie(vec!["admin"]))
+        .body(Body::from(serde_json::to_vec(&body).unwrap()))
+        .unwrap();
+    let (status, created) = send(app.clone(), req).await;
+    assert_eq!(status, StatusCode::OK);
+    let id = created["id"].as_str().unwrap();
+
+    // Update as viewer
+    let update_body = json!({ "name": "updated" });
+    let req = Request::builder()
+        .method("PUT")
+        .uri(format!("/api/v1/deployments/{id}"))
+        .header("content-type", "application/json")
+        .header("cookie", session_cookie(vec!["viewer"]))
+        .body(Body::from(serde_json::to_vec(&update_body).unwrap()))
+        .unwrap();
+    let (status, _) = send(app, req).await;
+    assert_eq!(status, StatusCode::FORBIDDEN);
+}
+
+#[tokio::test]
+async fn viewer_cannot_delete_deployment() {
+    let (app, _) = test_app_oidc().await;
+    // Create as admin
+    let body = json!({
+        "name": "to-delete",
+        "service_type": "crow_dns",
+        "endpoint_url": "http://localhost:9999"
+    });
+    let req = Request::builder()
+        .method("POST")
+        .uri("/api/v1/deployments")
+        .header("content-type", "application/json")
+        .header("cookie", session_cookie(vec!["admin"]))
+        .body(Body::from(serde_json::to_vec(&body).unwrap()))
+        .unwrap();
+    let (status, created) = send(app.clone(), req).await;
+    assert_eq!(status, StatusCode::OK);
+    let id = created["id"].as_str().unwrap();
+
+    // Delete as viewer
+    let req = Request::builder()
+        .method("DELETE")
+        .uri(format!("/api/v1/deployments/{id}"))
+        .header("cookie", session_cookie(vec!["viewer"]))
+        .body(Body::empty())
+        .unwrap();
+    let (status, _) = send(app, req).await;
+    assert_eq!(status, StatusCode::FORBIDDEN);
+}
+
+#[tokio::test]
+async fn viewer_cannot_view_audit_logs() {
+    let (app, _) = test_app_oidc().await;
+    let req = Request::builder()
+        .uri("/api/v1/audit-logs")
+        .header("cookie", session_cookie(vec!["viewer"]))
+        .body(Body::empty())
+        .unwrap();
+    let (status, _) = send(app, req).await;
+    assert_eq!(status, StatusCode::FORBIDDEN);
+}
+
+#[tokio::test]
+async fn admin_can_create_deployment() {
+    let (app, _) = test_app_oidc().await;
+    let body = json!({
+        "name": "admin-created",
+        "service_type": "crow_dns",
+        "endpoint_url": "http://localhost:9999"
+    });
+    let req = Request::builder()
+        .method("POST")
+        .uri("/api/v1/deployments")
+        .header("content-type", "application/json")
+        .header("cookie", session_cookie(vec!["admin"]))
+        .body(Body::from(serde_json::to_vec(&body).unwrap()))
+        .unwrap();
+    let (status, json) = send(app, req).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(json["name"], "admin-created");
+}
+
+#[tokio::test]
+async fn admin_can_view_audit_logs() {
+    let (app, _) = test_app_oidc().await;
+    let req = Request::builder()
+        .uri("/api/v1/audit-logs")
+        .header("cookie", session_cookie(vec!["admin"]))
+        .body(Body::empty())
+        .unwrap();
+    let (status, json) = send(app, req).await;
+    assert_eq!(status, StatusCode::OK);
+    assert!(json.is_array());
+}
+
+#[tokio::test]
+async fn viewer_can_list_deployments() {
+    let (app, _) = test_app_oidc().await;
+    let req = Request::builder()
+        .uri("/api/v1/deployments")
+        .header("cookie", session_cookie(vec!["viewer"]))
+        .body(Body::empty())
+        .unwrap();
+    let (status, json) = send(app, req).await;
+    assert_eq!(status, StatusCode::OK);
+    assert!(json.is_array());
+}
+
+#[tokio::test]
+async fn viewer_can_view_fleet_health() {
+    let (app, _) = test_app_oidc().await;
+    let req = Request::builder()
+        .uri("/api/v1/fleet/health")
+        .header("cookie", session_cookie(vec!["viewer"]))
+        .body(Body::empty())
+        .unwrap();
+    let (status, _) = send(app, req).await;
+    assert_eq!(status, StatusCode::OK);
+}
+
+#[tokio::test]
+async fn unauthenticated_gets_401() {
+    let (app, _) = test_app_oidc().await;
+    let req = Request::builder()
+        .uri("/api/v1/deployments")
+        .body(Body::empty())
+        .unwrap();
+    let (status, _) = send(app, req).await;
+    assert_eq!(status, StatusCode::UNAUTHORIZED);
 }

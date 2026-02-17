@@ -6,6 +6,7 @@ use serde_json::json;
 pub enum AppError {
     NotFound(String),
     BadRequest(String),
+    Forbidden(String),
     Internal(String),
     Database(sqlx::Error),
     Proxy(reqwest::Error),
@@ -16,6 +17,7 @@ impl std::fmt::Display for AppError {
         match self {
             Self::NotFound(msg) => write!(f, "not found: {msg}"),
             Self::BadRequest(msg) => write!(f, "bad request: {msg}"),
+            Self::Forbidden(msg) => write!(f, "forbidden: {msg}"),
             Self::Internal(msg) => write!(f, "internal error: {msg}"),
             Self::Database(e) => write!(f, "database error: {e}"),
             Self::Proxy(e) => write!(f, "proxy error: {e}"),
@@ -28,6 +30,7 @@ impl IntoResponse for AppError {
         let (status, message) = match &self {
             Self::NotFound(msg) => (StatusCode::NOT_FOUND, msg.clone()),
             Self::BadRequest(msg) => (StatusCode::BAD_REQUEST, msg.clone()),
+            Self::Forbidden(msg) => (StatusCode::FORBIDDEN, msg.clone()),
             Self::Internal(msg) => (StatusCode::INTERNAL_SERVER_ERROR, msg.clone()),
             Self::Database(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()),
             Self::Proxy(e) => (StatusCode::BAD_GATEWAY, e.to_string()),
@@ -68,6 +71,12 @@ mod tests {
     }
 
     #[test]
+    fn forbidden_is_403() {
+        let resp = AppError::Forbidden("denied".into()).into_response();
+        assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+    }
+
+    #[test]
     fn internal_is_500() {
         let resp = AppError::Internal("oops".into()).into_response();
         assert_eq!(resp.status(), StatusCode::INTERNAL_SERVER_ERROR);
@@ -84,6 +93,11 @@ mod tests {
             AppError::BadRequest("x".into())
                 .to_string()
                 .starts_with("bad request:")
+        );
+        assert!(
+            AppError::Forbidden("x".into())
+                .to_string()
+                .starts_with("forbidden:")
         );
         assert!(
             AppError::Internal("x".into())
