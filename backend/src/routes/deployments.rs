@@ -1,11 +1,12 @@
-use axum::extract::{Path, State};
+use axum::extract::{Extension, Path, State};
 use axum::routing::get;
 use axum::{Json, Router};
 use std::sync::Arc;
 
 use crate::AppState;
+use crate::auth::session::Session;
 use crate::error::AppError;
-use crate::models::{CreateDeploymentRequest, Deployment, UpdateDeploymentRequest};
+use crate::models::{AuditLog, CreateDeploymentRequest, Deployment, UpdateDeploymentRequest};
 
 pub fn routes() -> Router<Arc<AppState>> {
     Router::new()
@@ -38,10 +39,25 @@ async fn get_deployment(
 
 async fn create_deployment(
     State(state): State<Arc<AppState>>,
+    Extension(session): Extension<Session>,
     Json(req): Json<CreateDeploymentRequest>,
 ) -> Result<Json<Deployment>, AppError> {
     validate_deployment_input(&req.name, &req.endpoint_url, &req.tags)?;
     let deployment = Deployment::create(&state.db.pool, req).await?;
+
+    AuditLog::record(
+        &state.db.pool,
+        &session.sub,
+        &session.name,
+        "create",
+        "deployment",
+        &deployment.id,
+        &deployment.name,
+        &serde_json::json!({"service_type": deployment.service_type.to_string()}),
+    )
+    .await
+    .ok();
+
     Ok(Json(deployment))
 }
 
@@ -84,6 +100,7 @@ fn validate_deployment_input(
 
 async fn update_deployment(
     State(state): State<Arc<AppState>>,
+    Extension(session): Extension<Session>,
     Path(id): Path<String>,
     Json(req): Json<UpdateDeploymentRequest>,
 ) -> Result<Json<Deployment>, AppError> {
@@ -119,13 +136,46 @@ async fn update_deployment(
         }
     }
     let deployment = Deployment::update(&state.db.pool, &id, req).await?;
+
+    AuditLog::record(
+        &state.db.pool,
+        &session.sub,
+        &session.name,
+        "update",
+        "deployment",
+        &id,
+        &deployment.name,
+        &serde_json::json!({}),
+    )
+    .await
+    .ok();
+
     Ok(Json(deployment))
 }
 
 async fn delete_deployment(
     State(state): State<Arc<AppState>>,
+    Extension(session): Extension<Session>,
     Path(id): Path<String>,
 ) -> Result<Json<serde_json::Value>, AppError> {
+    // Get the deployment name before deleting for the audit log
+    let deployment = Deployment::get(&state.db.pool, &id).await?;
+    let name = deployment.name.clone();
+
     Deployment::delete(&state.db.pool, &id).await?;
+
+    AuditLog::record(
+        &state.db.pool,
+        &session.sub,
+        &session.name,
+        "delete",
+        "deployment",
+        &id,
+        &name,
+        &serde_json::json!({}),
+    )
+    .await
+    .ok();
+
     Ok(Json(serde_json::json!({ "deleted": true })))
 }

@@ -47,6 +47,31 @@ impl Db {
             .execute(&self.pool)
             .await;
 
+        // Audit log table
+        sqlx::query(
+            r#"
+            CREATE TABLE IF NOT EXISTS audit_logs (
+                id            TEXT PRIMARY KEY,
+                timestamp     TEXT NOT NULL,
+                actor_sub     TEXT NOT NULL,
+                actor_name    TEXT NOT NULL,
+                action        TEXT NOT NULL CHECK(action IN ('create', 'update', 'delete')),
+                resource_type TEXT NOT NULL DEFAULT 'deployment',
+                resource_id   TEXT NOT NULL,
+                resource_name TEXT NOT NULL DEFAULT '',
+                details       TEXT NOT NULL DEFAULT '{}'
+            );
+            "#,
+        )
+        .execute(&self.pool)
+        .await?;
+
+        sqlx::query(
+            "CREATE INDEX IF NOT EXISTS idx_audit_logs_timestamp ON audit_logs(timestamp DESC)",
+        )
+        .execute(&self.pool)
+        .await?;
+
         Ok(())
     }
 }

@@ -1,4 +1,5 @@
 mod api_docs;
+mod audit;
 pub mod auth;
 mod deployments;
 mod fleet_analytics;
@@ -19,6 +20,7 @@ pub fn api_routes(state: Arc<AppState>) -> Router<Arc<AppState>> {
         .merge(fleet_analytics::routes())
         .merge(fleet_ws::routes())
         .merge(proxy::routes())
+        .merge(audit::routes())
         .route_layer(axum_mw::from_fn_with_state(
             state,
             crate::middleware::auth::require_auth,

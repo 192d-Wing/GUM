@@ -283,3 +283,50 @@ async fn fleet_health_counts() {
     assert_eq!(json["degraded"], 0);
     assert_eq!(json["unknown"], 0);
 }
+
+// ─── Audit logs ─────────────────────────────────────────────────────
+
+#[tokio::test]
+async fn create_deployment_generates_audit_log() {
+    let (app, _) = test_app().await;
+    create_test_deployment(&app, "audited-create").await;
+
+    let req = Request::builder()
+        .uri("/api/v1/audit-logs")
+        .body(Body::empty())
+        .unwrap();
+    let (status, json) = send(app, req).await;
+    assert_eq!(status, StatusCode::OK);
+
+    let logs = json.as_array().unwrap();
+    assert_eq!(logs.len(), 1);
+    assert_eq!(logs[0]["action"], "create");
+    assert_eq!(logs[0]["resource_name"], "audited-create");
+    assert_eq!(logs[0]["actor_sub"], "admin");
+}
+
+#[tokio::test]
+async fn delete_deployment_generates_audit_log() {
+    let (app, _) = test_app().await;
+    let created = create_test_deployment(&app, "audited-delete").await;
+    let id = created["id"].as_str().unwrap();
+
+    let req = Request::builder()
+        .method("DELETE")
+        .uri(format!("/api/v1/deployments/{id}"))
+        .body(Body::empty())
+        .unwrap();
+    send(app.clone(), req).await;
+
+    let req = Request::builder()
+        .uri("/api/v1/audit-logs?action=delete")
+        .body(Body::empty())
+        .unwrap();
+    let (status, json) = send(app, req).await;
+    assert_eq!(status, StatusCode::OK);
+
+    let logs = json.as_array().unwrap();
+    assert_eq!(logs.len(), 1);
+    assert_eq!(logs[0]["action"], "delete");
+    assert_eq!(logs[0]["resource_name"], "audited-delete");
+}
