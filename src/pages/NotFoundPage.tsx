@@ -7,7 +7,7 @@ export default function NotFoundPage() {
     <Box textAlign="center" padding={{ top: "xxxl" }}>
       <Header variant="h1">404</Header>
       <Box variant="p" padding={{ top: "s" }}>
-        Page not found. <Link href="/">Return to dashboard</Link>
+        Page not found. <Link href="/">Return to fleet overview</Link>
       </Box>
     </Box>
   );

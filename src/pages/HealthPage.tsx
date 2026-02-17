@@ -5,7 +5,6 @@ import Pagination from "@cloudscape-design/components/pagination";
 import PropertyFilter from "@cloudscape-design/components/property-filter";
 import { useCollection } from "@cloudscape-design/collection-hooks";
 import { useHealthTargets } from "../api/hooks/useHealth";
-import { useWsStatus } from "../providers/WebSocketProvider";
 import type { HealthTargetState } from "../api/types";
 
 const COLUMN_DEFINITIONS = [
@@ -63,8 +62,7 @@ const FILTERING_PROPERTIES = [
 ];
 
 export default function HealthPage() {
-  const { connected } = useWsStatus();
-  const { data, isLoading } = useHealthTargets(connected ? false : 10000);
+  const { data, isLoading } = useHealthTargets(10000);
   const targets = data?.targets ?? [];
 
   const {

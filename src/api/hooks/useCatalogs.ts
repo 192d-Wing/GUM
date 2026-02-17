@@ -1,13 +1,17 @@
 import { useQuery } from "@tanstack/react-query";
 import apiClient from "../client";
 import type { CatalogSummary, CatalogDetail } from "../types";
+import { useDeploymentApiPrefix, useDeploymentId } from "../useDeploymentApi";
 
 export function useCatalogs() {
+  const prefix = useDeploymentApiPrefix();
+  const deploymentId = useDeploymentId();
+
   return useQuery<CatalogSummary[]>({
-    queryKey: ["catalogs"],
+    queryKey: ["deployments", deploymentId, "catalogs"],
     queryFn: async () => {
       const { data } = await apiClient.get<CatalogSummary[]>(
-        "/api/v1/catalogs",
+        `${prefix}/api/v1/catalogs`,
       );
       return data;
     },
@@ -15,11 +19,14 @@ export function useCatalogs() {
 }
 
 export function useCatalog(name: string) {
+  const prefix = useDeploymentApiPrefix();
+  const deploymentId = useDeploymentId();
+
   return useQuery<CatalogDetail>({
-    queryKey: ["catalogs", name],
+    queryKey: ["deployments", deploymentId, "catalogs", name],
     queryFn: async () => {
       const { data } = await apiClient.get<CatalogDetail>(
-        `/api/v1/catalogs/${encodeURIComponent(name)}`,
+        `${prefix}/api/v1/catalogs/${encodeURIComponent(name)}`,
       );
       return data;
     },

@@ -1,4 +1,66 @@
-// TypeScript interfaces mirroring Rust API structs in crow-server/src/api/
+// =====================================================================
+// GUM Fleet / Deployment types (GUM backend)
+// =====================================================================
+
+export type ServiceType = "crow_dns" | "ntp";
+export type HealthStatus = "healthy" | "degraded" | "unhealthy" | "unknown";
+export type DeploymentAuthType = "none" | "bearer_token" | "basic_auth";
+
+export interface Deployment {
+  id: string;
+  name: string;
+  service_type: ServiceType;
+  endpoint_url: string;
+  health_status: HealthStatus;
+  last_seen: string | null;
+  created_at: string;
+  tags: Record<string, string>;
+  auth_type?: DeploymentAuthType;
+}
+
+export interface CreateDeploymentRequest {
+  name: string;
+  service_type: ServiceType;
+  endpoint_url: string;
+  tags?: Record<string, string>;
+  auth_type?: DeploymentAuthType;
+  auth_credential?: string;
+}
+
+export interface UpdateDeploymentRequest {
+  name?: string;
+  endpoint_url?: string;
+  tags?: Record<string, string>;
+  auth_type?: DeploymentAuthType;
+  auth_credential?: string;
+}
+
+export interface FleetHealth {
+  total: number;
+  healthy: number;
+  degraded: number;
+  unhealthy: number;
+  unknown: number;
+  deployments: DeploymentHealthSummary[];
+}
+
+export interface DeploymentHealthSummary {
+  id: string;
+  name: string;
+  service_type: ServiceType;
+  health_status: HealthStatus;
+  last_seen: string | null;
+}
+
+export interface FleetTopEntry {
+  key: string;
+  count: number;
+  deployments: string[];
+}
+
+// =====================================================================
+// Crow DNS types (mirroring crow-server/src/api/)
+// =====================================================================
 
 // --- Stats (stats.rs: ServerStats) ---
 export interface ServerStats {
@@ -181,6 +243,82 @@ export interface MfaVerifyRequest {
 
 export interface MfaVerifyResponse {
   valid: boolean;
+}
+
+// =====================================================================
+// NTP Server types (ntp_usg-server API)
+// =====================================================================
+
+// --- NTP Config ---
+export interface NtpServerConfig {
+  listen_addresses: string[];
+  stratum: number;
+  reference_id: string;
+  max_clients: number;
+  rate_limit: number;
+}
+
+// --- NTP Sources ---
+export interface NtpSource {
+  id: string;
+  address: string;
+  stratum: number;
+  state: "synced" | "reachable" | "unreachable" | "unknown";
+}
+
+export interface NtpSourceDetail {
+  id: string;
+  address: string;
+  stratum: number;
+  reach: number;
+  delay: number;
+  offset: number;
+  jitter: number;
+  state: "synced" | "reachable" | "unreachable" | "unknown";
+  poll_interval: number;
+  last_poll: string | null;
+}
+
+export interface CreateNtpSourceRequest {
+  address: string;
+}
+
+// --- NTP Sync Status ---
+export interface NtpSyncStatus {
+  synchronized: boolean;
+  stratum: number;
+  offset: number;
+  jitter: number;
+  sync_source: string | null;
+  leap_indicator: number;
+  precision: number;
+  root_delay: number;
+  root_dispersion: number;
+}
+
+// --- NTP Stats ---
+export interface NtpServerStats {
+  total_requests: number;
+  requests_per_second: number;
+  source_count: number;
+  active_clients: number;
+}
+
+// --- NTP Access Control ---
+export interface IpRangeList {
+  ranges: string[];
+}
+
+// =====================================================================
+// Auth types (GUM backend SSO/OIDC)
+// =====================================================================
+
+export interface AuthUser {
+  authenticated: boolean;
+  sub: string;
+  name: string;
+  email: string;
+  roles: string[];
 }
 
 // --- API Error ---

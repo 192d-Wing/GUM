@@ -3,8 +3,10 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AuthProvider } from "../../providers/AuthProvider";
 import { ThemeProvider } from "../../providers/ThemeProvider";
 import { WebSocketProvider } from "../../providers/WebSocketProvider";
+import { DeploymentProvider } from "../../providers/DeploymentProvider";
 import DashboardPage from "../DashboardPage";
-import type { ServerStats } from "../../api/types";
+import type { Deployment, ServerStats } from "../../api/types";
+import apiClient from "../../api/client";
 import { vi } from "vitest";
 
 vi.mock("../../api/client", () => ({
@@ -20,6 +22,19 @@ vi.mock("../../api/client", () => ({
   },
 }));
 
+const mockGet = apiClient.get as ReturnType<typeof vi.fn>;
+
+const TEST_DEPLOYMENT: Deployment = {
+  id: "test-deploy-1",
+  name: "test-dns",
+  service_type: "CrowDns",
+  endpoint_url: "http://localhost:8080",
+  health_status: "healthy",
+  last_seen: new Date().toISOString(),
+  created_at: new Date().toISOString(),
+  tags: {},
+};
+
 const MOCK_STATS: ServerStats = {
   zone_count: 12,
   cache_size: 5000,
@@ -31,19 +46,25 @@ const MOCK_STATS: ServerStats = {
 };
 
 function renderDashboard(preloadStats?: ServerStats) {
+  mockGet.mockResolvedValue({
+    data: { authenticated: true, name: "Test User", email: "test@example.com", roles: [] },
+  });
+
   const qc = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
   if (preloadStats) {
-    qc.setQueryData(["stats"], preloadStats);
+    qc.setQueryData(["deployments", TEST_DEPLOYMENT.id, "stats"], preloadStats);
   }
   return render(
     <AuthProvider>
       <ThemeProvider>
         <QueryClientProvider client={qc}>
-          <WebSocketProvider>
-            <DashboardPage />
-          </WebSocketProvider>
+          <DeploymentProvider initialDeployment={TEST_DEPLOYMENT}>
+            <WebSocketProvider>
+              <DashboardPage />
+            </WebSocketProvider>
+          </DeploymentProvider>
         </QueryClientProvider>
       </ThemeProvider>
     </AuthProvider>,
@@ -51,6 +72,9 @@ function renderDashboard(preloadStats?: ServerStats) {
 }
 
 describe("DashboardPage", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
 
   it("renders stats when data is preloaded in cache", async () => {
     renderDashboard(MOCK_STATS);
@@ -66,7 +90,6 @@ describe("DashboardPage", () => {
 
   it("shows loading spinner when no cached data", () => {
     renderDashboard();
-    // The spinner from Cloudscape renders a role="status" element
     expect(document.querySelector('[class*="spinner"]') || screen.queryByText("Dashboard") === null).toBeTruthy();
   });
 

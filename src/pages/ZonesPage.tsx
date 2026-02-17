@@ -9,6 +9,7 @@ import PropertyFilter from "@cloudscape-design/components/property-filter";
 import StatusIndicator from "@cloudscape-design/components/status-indicator";
 import { useCollection } from "@cloudscape-design/collection-hooks";
 import { useZones } from "../api/hooks/useZones";
+import { useDeploymentPath } from "../hooks/useDeploymentPath";
 import type { ZoneSummary } from "../api/types";
 
 const COLUMN_DEFINITIONS = [
@@ -60,6 +61,7 @@ const FILTERING_PROPERTIES = [
 
 export default function ZonesPage() {
   const navigate = useNavigate();
+  const path = useDeploymentPath();
   const { data: zones = [], isLoading } = useZones();
   const [selectedItems, setSelectedItems] = useState<ZoneSummary[]>([]);
 
@@ -94,7 +96,7 @@ export default function ZonesPage() {
       onSelectionChange={({ detail }) =>
         setSelectedItems(detail.selectedItems as ZoneSummary[])
       }
-      onRowClick={({ detail }) => navigate(`/zones/${encodeURIComponent(detail.item.name)}`)}
+      onRowClick={({ detail }) => navigate(path(`zones/${encodeURIComponent(detail.item.name)}`))}
       header={
         <Header
           variant="h1"
@@ -105,7 +107,7 @@ export default function ZonesPage() {
                 disabled={selectedItems.length === 0}
                 onClick={() => {
                   if (selectedItems[0]) {
-                    navigate(`/zones/${encodeURIComponent(selectedItems[0].name)}`);
+                    navigate(path(`zones/${encodeURIComponent(selectedItems[0].name)}`));
                   }
                 }}
               >

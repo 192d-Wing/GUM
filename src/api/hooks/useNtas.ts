@@ -1,44 +1,60 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import apiClient from "../client";
 import type { NtaListResponse, AddNtaRequest, NtaActionResponse } from "../types";
+import { useDeploymentApiPrefix, useDeploymentId } from "../useDeploymentApi";
 
 export function useNtas() {
+  const prefix = useDeploymentApiPrefix();
+  const deploymentId = useDeploymentId();
+
   return useQuery<NtaListResponse>({
-    queryKey: ["ntas"],
+    queryKey: ["deployments", deploymentId, "ntas"],
     queryFn: async () => {
-      const { data } = await apiClient.get<NtaListResponse>("/api/v1/ntas");
+      const { data } = await apiClient.get<NtaListResponse>(
+        `${prefix}/api/v1/ntas`,
+      );
       return data;
     },
   });
 }
 
 export function useAddNta() {
+  const prefix = useDeploymentApiPrefix();
+  const deploymentId = useDeploymentId();
   const queryClient = useQueryClient();
+
   return useMutation<NtaActionResponse, Error, AddNtaRequest>({
     mutationFn: async (body) => {
       const { data } = await apiClient.post<NtaActionResponse>(
-        "/api/v1/ntas",
+        `${prefix}/api/v1/ntas`,
         body,
       );
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["ntas"] });
+      queryClient.invalidateQueries({
+        queryKey: ["deployments", deploymentId, "ntas"],
+      });
     },
   });
 }
 
 export function useDeleteNta() {
+  const prefix = useDeploymentApiPrefix();
+  const deploymentId = useDeploymentId();
   const queryClient = useQueryClient();
+
   return useMutation<NtaActionResponse, Error, string>({
     mutationFn: async (zone) => {
       const { data } = await apiClient.delete<NtaActionResponse>(
-        `/api/v1/ntas/${encodeURIComponent(zone)}`,
+        `${prefix}/api/v1/ntas/${encodeURIComponent(zone)}`,
       );
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["ntas"] });
+      queryClient.invalidateQueries({
+        queryKey: ["deployments", deploymentId, "ntas"],
+      });
     },
   });
 }

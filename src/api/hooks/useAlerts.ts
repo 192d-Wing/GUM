@@ -1,12 +1,18 @@
 import { useQuery } from "@tanstack/react-query";
 import apiClient from "../client";
 import type { AlertsResponse, AlertRuleSummary } from "../types";
+import { useDeploymentApiPrefix, useDeploymentId } from "../useDeploymentApi";
 
 export function useAlerts(refetchInterval = 10000) {
+  const prefix = useDeploymentApiPrefix();
+  const deploymentId = useDeploymentId();
+
   return useQuery<AlertsResponse>({
-    queryKey: ["alerts"],
+    queryKey: ["deployments", deploymentId, "alerts"],
     queryFn: async () => {
-      const { data } = await apiClient.get<AlertsResponse>("/api/v1/alerts");
+      const { data } = await apiClient.get<AlertsResponse>(
+        `${prefix}/api/v1/alerts`,
+      );
       return data;
     },
     refetchInterval,
@@ -14,11 +20,14 @@ export function useAlerts(refetchInterval = 10000) {
 }
 
 export function useAlertRules() {
+  const prefix = useDeploymentApiPrefix();
+  const deploymentId = useDeploymentId();
+
   return useQuery<AlertRuleSummary[]>({
-    queryKey: ["alerts", "rules"],
+    queryKey: ["deployments", deploymentId, "alerts", "rules"],
     queryFn: async () => {
       const { data } = await apiClient.get<AlertRuleSummary[]>(
-        "/api/v1/alerts/rules",
+        `${prefix}/api/v1/alerts/rules`,
       );
       return data;
     },

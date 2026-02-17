@@ -1,0 +1,32 @@
+# GUM Docker Compose
+#
+# Usage:
+#   docker compose up --build        # Build and start
+#   docker compose up -d             # Start in background
+#   docker compose down              # Stop and remove containers
+#
+# Before first run, create your config:
+#   cp backend/gum.example.toml gum.toml
+#   # Edit gum.toml with your settings (database_url, OIDC, session_secret, etc.)
+
+services:
+  gum:
+    build: .
+    ports:
+      - "4000:4000"
+    volumes:
+      - ./gum.toml:/app/gum.toml:ro
+      - gum-data:/app/data
+    environment:
+      - GUM_CONFIG=/app/gum.toml
+      - RUST_LOG=info,gum_backend=debug
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:4000/health/live"]
+      interval: 15s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
+
+volumes:
+  gum-data:

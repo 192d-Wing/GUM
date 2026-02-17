@@ -18,6 +18,7 @@ vi.mock("../../api/client", () => ({
 }));
 
 import apiClient from "../../api/client";
+const mockGet = vi.mocked(apiClient.get);
 const mockPost = vi.mocked(apiClient.post);
 
 // Minimal mock WebSocket.
@@ -58,11 +59,21 @@ function StatusConsumer() {
 }
 
 function renderWithProviders(authenticated: boolean) {
-  // Control initial auth state via pathname.
-  Object.defineProperty(window, "location", {
-    value: { pathname: authenticated ? "/" : "/login", href: authenticated ? "/" : "/login" },
-    writable: true,
-  });
+  // Mock /auth/me to control auth state.
+  if (authenticated) {
+    mockGet.mockResolvedValueOnce({
+      data: {
+        authenticated: true,
+        sub: "test-user",
+        name: "Test User",
+        email: "test@example.com",
+        roles: [],
+      },
+      status: 200,
+    } as never);
+  } else {
+    mockGet.mockRejectedValueOnce(new Error("401"));
+  }
 
   const qc = new QueryClient({
     defaultOptions: { queries: { retry: false } },
@@ -92,10 +103,13 @@ describe("WebSocketProvider", () => {
     vi.unstubAllGlobals();
   });
 
-  it("does not connect when unauthenticated", () => {
+  it("does not connect when unauthenticated", async () => {
     renderWithProviders(false);
+    // Wait for auth check to complete
+    await waitFor(() => {
+      expect(screen.getByTestId("ws")).toHaveTextContent("disconnected");
+    });
     expect(MockWebSocket.instances).toHaveLength(0);
-    expect(screen.getByTestId("ws")).toHaveTextContent("disconnected");
   });
 
   it("fetches ticket and connects when authenticated", async () => {

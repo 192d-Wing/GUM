@@ -2,34 +2,33 @@ import TopNavigation from "@cloudscape-design/components/top-navigation";
 import type { TopNavigationProps } from "@cloudscape-design/components/top-navigation";
 import { useAuth } from "../providers/AuthProvider";
 import { useTheme } from "../providers/ThemeProvider";
-import { useWsStatus } from "../providers/WebSocketProvider";
 
 export default function TopNav() {
-  const { isAuthenticated, logout } = useAuth();
+  const { isAuthenticated, user, logout } = useAuth();
   const { mode, toggleMode } = useTheme();
-  const { connected } = useWsStatus();
 
   const utilities: TopNavigationProps.Utility[] = [];
 
   if (isAuthenticated) {
-    utilities.push(
-      {
-        type: "button",
-        text: connected ? "Live" : "Disconnected",
-        iconName: connected ? "status-positive" : "status-warning",
-        disableUtilityCollapse: true,
+    utilities.push({
+      type: "button",
+      text: mode === "dark" ? "Light mode" : "Dark mode",
+      onClick: toggleMode,
+    });
+
+    utilities.push({
+      type: "menu-dropdown",
+      text: user?.name ?? "User",
+      description: user?.email ?? "",
+      items: [
+        { id: "signout", text: "Sign out" },
+      ],
+      onItemClick: ({ detail }) => {
+        if (detail.id === "signout") {
+          logout();
+        }
       },
-      {
-        type: "button",
-        text: mode === "dark" ? "Light mode" : "Dark mode",
-        onClick: toggleMode,
-      },
-      {
-        type: "button",
-        text: "Sign out",
-        onClick: logout,
-      },
-    );
+    });
   }
 
   return (
@@ -37,7 +36,7 @@ export default function TopNav() {
       <TopNavigation
         identity={{
           href: "/",
-          title: "Crow DNS",
+          title: "GUM",
         }}
         utilities={utilities}
         i18nStrings={{

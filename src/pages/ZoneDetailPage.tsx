@@ -14,6 +14,7 @@ import BreadcrumbGroup from "@cloudscape-design/components/breadcrumb-group";
 import { useCollection } from "@cloudscape-design/collection-hooks";
 import { useZone } from "../api/hooks/useZones";
 import { useRecords } from "../api/hooks/useRecords";
+import { useDeploymentPath } from "../hooks/useDeploymentPath";
 import type { RecordEntry } from "../api/types";
 
 const RECORD_COLUMNS = [
@@ -66,6 +67,7 @@ const RECORD_FILTER_PROPERTIES = [
 export default function ZoneDetailPage() {
   const { name = "" } = useParams();
   const navigate = useNavigate();
+  const path = useDeploymentPath();
   const { data: zone, isLoading: zoneLoading } = useZone(name);
   const { data: records = [], isLoading: recordsLoading } = useRecords(name);
 
@@ -105,8 +107,8 @@ export default function ZoneDetailPage() {
     <SpaceBetween size="l">
       <BreadcrumbGroup
         items={[
-          { text: "Zones", href: "/zones" },
-          { text: zone.name, href: `/zones/${encodeURIComponent(zone.name)}` },
+          { text: "Zones", href: path("zones") },
+          { text: zone.name, href: path(`zones/${encodeURIComponent(zone.name)}`) },
         ]}
         onFollow={(event) => {
           event.preventDefault();

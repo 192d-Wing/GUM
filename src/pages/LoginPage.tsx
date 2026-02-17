@@ -1,68 +1,43 @@
-import { useState } from "react";
+import { useEffect } from "react";
 import { useNavigate } from "react-router";
 import Container from "@cloudscape-design/components/container";
 import Header from "@cloudscape-design/components/header";
-import FormField from "@cloudscape-design/components/form-field";
-import Input from "@cloudscape-design/components/input";
 import Button from "@cloudscape-design/components/button";
 import SpaceBetween from "@cloudscape-design/components/space-between";
 import Box from "@cloudscape-design/components/box";
-import Alert from "@cloudscape-design/components/alert";
+import Spinner from "@cloudscape-design/components/spinner";
 import { useAuth } from "../providers/AuthProvider";
 
 export default function LoginPage() {
-  const [tokenInput, setTokenInput] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
+  const { isAuthenticated, loading, login } = useAuth();
   const navigate = useNavigate();
 
-  const handleSubmit = async () => {
-    if (!tokenInput.trim()) return;
-    setError(null);
-    setLoading(true);
-    try {
-      await login(tokenInput.trim());
-      navigate("/");
-    } catch {
-      setError("Invalid API token. Please try again.");
-    } finally {
-      setLoading(false);
+  // If already authenticated, redirect to home.
+  useEffect(() => {
+    if (!loading && isAuthenticated) {
+      navigate("/", { replace: true });
     }
-  };
+  }, [loading, isAuthenticated, navigate]);
+
+  if (loading) {
+    return (
+      <Box textAlign="center" padding={{ top: "xxxl" }}>
+        <Spinner size="large" />
+      </Box>
+    );
+  }
 
   return (
     <Box padding={{ top: "xxxl" }}>
       <div style={{ maxWidth: 480, margin: "0 auto" }}>
-        <Container header={<Header variant="h2">Sign in to Crow DNS</Header>}>
+        <Container header={<Header variant="h2">Sign in to GUM</Header>}>
           <SpaceBetween size="l">
-            {error && (
-              <Alert type="error" dismissible onDismiss={() => setError(null)}>
-                {error}
-              </Alert>
-            )}
-            <FormField
-              label="API Token"
-              description="Enter your Bearer API token to authenticate."
-            >
-              <Input
-                type="password"
-                value={tokenInput}
-                onChange={({ detail }) => setTokenInput(detail.value)}
-                onKeyDown={({ detail }) => {
-                  if (detail.key === "Enter") handleSubmit();
-                }}
-                placeholder="Enter API token"
-                disabled={loading}
-              />
-            </FormField>
-            <Button
-              variant="primary"
-              onClick={handleSubmit}
-              loading={loading}
-              disabled={!tokenInput.trim()}
-            >
-              Sign in
+            <Box variant="p" color="text-body-secondary">
+              GUM uses Single Sign-On (SSO) for authentication. Click the button
+              below to sign in with your organization's identity provider.
+            </Box>
+            <Button variant="primary" onClick={login} fullWidth>
+              Sign in with SSO
             </Button>
           </SpaceBetween>
         </Container>

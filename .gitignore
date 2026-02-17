@@ -3,3 +3,8 @@ dist/
 *.local
 *.tsbuildinfo
 src/**/*.js
+
+# Rust backend
+backend/target/
+backend/*.db
+backend/*.db-*

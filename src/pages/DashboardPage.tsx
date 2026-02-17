@@ -6,11 +6,9 @@ import SpaceBetween from "@cloudscape-design/components/space-between";
 import StatusIndicator from "@cloudscape-design/components/status-indicator";
 import Spinner from "@cloudscape-design/components/spinner";
 import { useStats } from "../api/hooks/useStats";
-import { useWsStatus } from "../providers/WebSocketProvider";
 
 export default function DashboardPage() {
-  const { connected } = useWsStatus();
-  const { data: stats, isLoading, isError } = useStats(connected ? false : 5000);
+  const { data: stats, isLoading, isError } = useStats(5000);
 
   if (isLoading) {
     return (
