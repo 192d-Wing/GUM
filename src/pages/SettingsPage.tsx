@@ -125,6 +125,15 @@ const COLUMN_DEFINITIONS = [
     sortingField: "health_status",
   },
   {
+    id: "tags",
+    header: "Tags",
+    cell: (item: Deployment) => {
+      const entries = Object.entries(item.tags ?? {});
+      if (entries.length === 0) return "—";
+      return entries.map(([k, v]) => `${k}=${v}`).join(", ");
+    },
+  },
+  {
     id: "created_at",
     header: "Created",
     cell: (item: Deployment) => new Date(item.created_at).toLocaleDateString(),
