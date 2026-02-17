@@ -16,6 +16,7 @@ import { useCollection } from "@cloudscape-design/collection-hooks";
 import {
   useDeployments,
   useCreateDeployment,
+  useUpdateDeployment,
   useDeleteDeployment,
 } from "../api/hooks/useDeployments";
 import type { Deployment, HealthStatus, ServiceType } from "../api/types";
@@ -77,6 +78,7 @@ const COLUMN_DEFINITIONS = [
 export default function SettingsPage() {
   const { data: deployments = [], isLoading } = useDeployments();
   const createDeployment = useCreateDeployment();
+  const updateDeployment = useUpdateDeployment();
   const deleteDeployment = useDeleteDeployment();
 
   const [showAdd, setShowAdd] = useState(false);
@@ -85,6 +87,11 @@ export default function SettingsPage() {
   const [serviceType, setServiceType] = useState<SelectProps.Option>(
     SERVICE_OPTIONS[0],
   );
+
+  const [showEdit, setShowEdit] = useState(false);
+  const [editName, setEditName] = useState("");
+  const [editEndpointUrl, setEditEndpointUrl] = useState("");
+
   const [selectedItems, setSelectedItems] = useState<Deployment[]>([]);
   const [flash, setFlash] = useState<FlashbarProps.MessageDefinition[]>([]);
 
@@ -159,6 +166,45 @@ export default function SettingsPage() {
     });
   };
 
+  const openEdit = () => {
+    if (selectedItems.length === 0) return;
+    const target = selectedItems[0];
+    setEditName(target.name);
+    setEditEndpointUrl(target.endpoint_url);
+    setShowEdit(true);
+  };
+
+  const handleEdit = () => {
+    if (selectedItems.length === 0 || !editName.trim() || !editEndpointUrl.trim()) return;
+    const target = selectedItems[0];
+    updateDeployment.mutate(
+      { id: target.id, body: { name: editName.trim(), endpoint_url: editEndpointUrl.trim() } },
+      {
+        onSuccess: (d) => {
+          setFlash([
+            {
+              type: "success",
+              content: `Deployment "${d.name}" updated`,
+              dismissible: true,
+              onDismiss: () => setFlash([]),
+            },
+          ]);
+          setShowEdit(false);
+          setSelectedItems([]);
+        },
+        onError: (e) =>
+          setFlash([
+            {
+              type: "error",
+              content: `Failed: ${e.message}`,
+              dismissible: true,
+              onDismiss: () => setFlash([]),
+            },
+          ]),
+      },
+    );
+  };
+
   return (
     <SpaceBetween size="l">
       <Flashbar items={flash} />
@@ -186,6 +232,12 @@ export default function SettingsPage() {
                   onClick={handleDelete}
                 >
                   Remove
+                </Button>
+                <Button
+                  disabled={selectedItems.length === 0}
+                  onClick={openEdit}
+                >
+                  Edit
                 </Button>
                 <Button variant="primary" onClick={() => setShowAdd(true)}>
                   Add deployment
@@ -247,6 +299,59 @@ export default function SettingsPage() {
               value={endpointUrl}
               onChange={({ detail }) => setEndpointUrl(detail.value)}
               placeholder="https://dns-east.internal:8080"
+            />
+          </FormField>
+        </SpaceBetween>
+      </Modal>
+
+      <Modal
+        visible={showEdit}
+        onDismiss={() => setShowEdit(false)}
+        header="Edit deployment"
+        footer={
+          <Box float="right">
+            <SpaceBetween direction="horizontal" size="xs">
+              <Button onClick={() => setShowEdit(false)}>Cancel</Button>
+              <Button
+                variant="primary"
+                onClick={handleEdit}
+                loading={updateDeployment.isPending}
+                disabled={!editName.trim() || !editEndpointUrl.trim()}
+              >
+                Save
+              </Button>
+            </SpaceBetween>
+          </Box>
+        }
+      >
+        <SpaceBetween size="m">
+          <FormField
+            label="Name"
+            description="A friendly name for this deployment"
+          >
+            <Input
+              value={editName}
+              onChange={({ detail }) => setEditName(detail.value)}
+            />
+          </FormField>
+          <FormField label="Service type">
+            <Select
+              selectedOption={
+                SERVICE_OPTIONS.find(
+                  (o) => o.value === selectedItems[0]?.service_type,
+                ) ?? SERVICE_OPTIONS[0]
+              }
+              options={SERVICE_OPTIONS}
+              disabled
+            />
+          </FormField>
+          <FormField
+            label="Endpoint URL"
+            description="The base URL of the service API"
+          >
+            <Input
+              value={editEndpointUrl}
+              onChange={({ detail }) => setEditEndpointUrl(detail.value)}
             />
           </FormField>
         </SpaceBetween>
