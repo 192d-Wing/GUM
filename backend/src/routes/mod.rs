@@ -1,3 +1,4 @@
+mod api_docs;
 pub mod auth;
 mod deployments;
 mod fleet_analytics;
@@ -28,4 +29,5 @@ pub fn api_routes(state: Arc<AppState>) -> Router<Arc<AppState>> {
         .merge(protected)
         .merge(auth::routes())
         .merge(health_overview::health_routes())
+        .merge(api_docs::routes())
 }
