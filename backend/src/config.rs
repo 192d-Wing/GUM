@@ -28,6 +28,12 @@ pub struct AppConfig {
     /// Maximum request body size in bytes. Defaults to 2 MiB.
     #[serde(default = "default_max_body_size")]
     pub max_body_size: usize,
+    /// Maximum API requests per IP per window. 0 = disabled.
+    #[serde(default = "default_rate_limit")]
+    pub rate_limit: u64,
+    /// Rate limit window duration in seconds.
+    #[serde(default = "default_rate_limit_window")]
+    pub rate_limit_window: u64,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -85,6 +91,12 @@ fn default_health_poll_interval() -> u64 {
 fn default_max_body_size() -> usize {
     2 * 1024 * 1024 // 2 MiB
 }
+fn default_rate_limit() -> u64 {
+    100
+}
+fn default_rate_limit_window() -> u64 {
+    60
+}
 fn default_redirect_uri() -> String {
     "http://localhost:4000/api/v1/auth/oidc/callback".into()
 }
@@ -118,6 +130,8 @@ impl AppConfig {
                 health_poll_interval: default_health_poll_interval(),
                 allowed_origins: Vec::new(),
                 max_body_size: default_max_body_size(),
+                rate_limit: default_rate_limit(),
+                rate_limit_window: default_rate_limit_window(),
             })
         }
     }
@@ -168,6 +182,8 @@ mod tests {
             health_poll_interval: 30,
             allowed_origins: Vec::new(),
             max_body_size: default_max_body_size(),
+            rate_limit: default_rate_limit(),
+            rate_limit_window: default_rate_limit_window(),
         };
         assert_eq!(config.session_key(), b"my-secret-key".to_vec());
     }
@@ -184,6 +200,8 @@ mod tests {
             health_poll_interval: 30,
             allowed_origins: Vec::new(),
             max_body_size: default_max_body_size(),
+            rate_limit: default_rate_limit(),
+            rate_limit_window: default_rate_limit_window(),
         };
         let key = config.session_key();
         assert_eq!(key.len(), 32);

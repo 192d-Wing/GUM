@@ -40,6 +40,13 @@ allowed_origins = []
 # The proxy endpoint uses its own 10 MiB limit regardless of this setting.
 max_body_size = 2097152
 
+# ─── Rate Limiting ──────────────────────────────────────────────────
+# Maximum API requests per IP per window. Set to 0 to disable.
+rate_limit = 100
+
+# Rate limit window duration in seconds.
+rate_limit_window = 60
+
 # ─── OIDC / SSO ──────────────────────────────────────────────────────
 # When OIDC is disabled (default), GUM runs in "stub auth" mode where
 # all users are treated as an admin. Enable OIDC for real authentication.

@@ -8,7 +8,7 @@ use tower_http::set_header::SetResponseHeaderLayer;
 use tower_http::trace::TraceLayer;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
-use gum_backend::{AppState, auth, config, db, models, proxy, routes};
+use gum_backend::{AppState, auth, config, db, middleware, models, proxy, routes};
 
 #[tokio::main]
 async fn main() {
@@ -105,8 +105,27 @@ async fn main() {
             .allow_credentials(true)
     };
 
+    // Rate limiter
+    let rate_limit_state = middleware::rate_limit::RateLimitState::new(
+        config.rate_limit,
+        config.rate_limit_window,
+    );
+    if config.rate_limit > 0 {
+        rate_limit_state.start_cleanup_task();
+        tracing::info!(
+            "Rate limiting enabled: {} requests per {}s window",
+            config.rate_limit,
+            config.rate_limit_window
+        );
+    }
+
     let mut app = Router::new()
         .merge(routes::api_routes(state.clone()))
+        // Per-IP rate limiting
+        .layer(axum::middleware::from_fn_with_state(
+            rate_limit_state,
+            middleware::rate_limit::rate_limit,
+        ))
         // Global body size limit (proxy has its own 10 MiB limit)
         .layer(DefaultBodyLimit::max(config.max_body_size))
         // Security headers

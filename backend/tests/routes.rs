@@ -24,6 +24,8 @@ async fn test_app() -> (Router, Arc<AppState>) {
         health_poll_interval: 0,
         allowed_origins: Vec::new(),
         max_body_size: 2 * 1024 * 1024,
+        rate_limit: 0,
+        rate_limit_window: 60,
     };
 
     let state = Arc::new(AppState {
