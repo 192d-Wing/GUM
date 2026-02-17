@@ -438,4 +438,49 @@ mod tests {
         let deployment = Deployment::get(&pool, "bad-tags-id").await.unwrap();
         assert!(deployment.tags.is_empty());
     }
+
+    #[tokio::test]
+    async fn create_duplicate_name_returns_error() {
+        let pool = test_pool().await;
+        Deployment::create(&pool, make_create_request("dup")).await.unwrap();
+        let result = Deployment::create(&pool, make_create_request("dup")).await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn update_nonexistent_returns_not_found() {
+        let pool = test_pool().await;
+        let req = UpdateDeploymentRequest {
+            name: Some("new-name".into()),
+            endpoint_url: None,
+            tags: None,
+            auth_type: None,
+            auth_credential: None,
+        };
+        let result = Deployment::update(&pool, "nonexistent-id", req).await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn update_health_sets_last_seen() {
+        let pool = test_pool().await;
+        let d = Deployment::create(&pool, make_create_request("health-test")).await.unwrap();
+        assert!(d.last_seen.is_none());
+
+        Deployment::update_health(&pool, &d.id, &HealthStatus::Healthy).await.unwrap();
+        let updated = Deployment::get(&pool, &d.id).await.unwrap();
+        assert!(updated.last_seen.is_some());
+        assert_eq!(updated.health_status, HealthStatus::Healthy);
+    }
+
+    #[tokio::test]
+    async fn fleet_health_empty_database() {
+        let pool = test_pool().await;
+        let health = Deployment::fleet_health(&pool).await.unwrap();
+        assert_eq!(health.total, 0);
+        assert_eq!(health.healthy, 0);
+        assert_eq!(health.degraded, 0);
+        assert_eq!(health.unhealthy, 0);
+        assert_eq!(health.unknown, 0);
+    }
 }

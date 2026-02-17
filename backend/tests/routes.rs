@@ -330,3 +330,82 @@ async fn delete_deployment_generates_audit_log() {
     assert_eq!(logs[0]["action"], "delete");
     assert_eq!(logs[0]["resource_name"], "audited-delete");
 }
+
+// ─── Validation edge cases ──────────────────────────────────────────
+
+#[tokio::test]
+async fn create_invalid_url_scheme() {
+    let (app, _) = test_app().await;
+    let body = json!({
+        "name": "test",
+        "service_type": "crow_dns",
+        "endpoint_url": "ftp://localhost:9999"
+    });
+    let req = Request::builder()
+        .method("POST")
+        .uri("/api/v1/deployments")
+        .header("content-type", "application/json")
+        .body(Body::from(serde_json::to_vec(&body).unwrap()))
+        .unwrap();
+    let (status, _) = send(app, req).await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+}
+
+#[tokio::test]
+async fn create_name_too_long() {
+    let (app, _) = test_app().await;
+    let long_name = "x".repeat(256);
+    let body = json!({
+        "name": long_name,
+        "service_type": "crow_dns",
+        "endpoint_url": "http://localhost:9999"
+    });
+    let req = Request::builder()
+        .method("POST")
+        .uri("/api/v1/deployments")
+        .header("content-type", "application/json")
+        .body(Body::from(serde_json::to_vec(&body).unwrap()))
+        .unwrap();
+    let (status, _) = send(app, req).await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+}
+
+#[tokio::test]
+async fn create_too_many_tags() {
+    let (app, _) = test_app().await;
+    let mut tags = serde_json::Map::new();
+    for i in 0..51 {
+        tags.insert(format!("key{i}"), json!("value"));
+    }
+    let body = json!({
+        "name": "tag-test",
+        "service_type": "crow_dns",
+        "endpoint_url": "http://localhost:9999",
+        "tags": tags
+    });
+    let req = Request::builder()
+        .method("POST")
+        .uri("/api/v1/deployments")
+        .header("content-type", "application/json")
+        .body(Body::from(serde_json::to_vec(&body).unwrap()))
+        .unwrap();
+    let (status, _) = send(app, req).await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+}
+
+#[tokio::test]
+async fn update_empty_name_returns_400() {
+    let (app, _) = test_app().await;
+    let created = create_test_deployment(&app, "original").await;
+    let id = created["id"].as_str().unwrap();
+
+    let body = json!({ "name": "  " });
+    let req = Request::builder()
+        .method("PUT")
+        .uri(format!("/api/v1/deployments/{id}"))
+        .header("content-type", "application/json")
+        .body(Body::from(serde_json::to_vec(&body).unwrap()))
+        .unwrap();
+    let (status, _) = send(app, req).await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+}
