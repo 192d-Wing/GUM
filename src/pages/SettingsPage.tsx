@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import Table from "@cloudscape-design/components/table";
 import Header from "@cloudscape-design/components/header";
 import SpaceBetween from "@cloudscape-design/components/space-between";
@@ -12,6 +12,7 @@ import Box from "@cloudscape-design/components/box";
 import StatusIndicator from "@cloudscape-design/components/status-indicator";
 import Flashbar from "@cloudscape-design/components/flashbar";
 import type { FlashbarProps } from "@cloudscape-design/components/flashbar";
+import AttributeEditor from "@cloudscape-design/components/attribute-editor";
 import { useCollection } from "@cloudscape-design/collection-hooks";
 import {
   useDeployments,
@@ -21,10 +22,66 @@ import {
 } from "../api/hooks/useDeployments";
 import type { Deployment, HealthStatus, ServiceType } from "../api/types";
 
+interface TagItem {
+  key: string;
+  value: string;
+}
+
 const SERVICE_OPTIONS: SelectProps.Option[] = [
   { label: "Crow DNS", value: "crow_dns" },
   { label: "NTP", value: "ntp" },
 ];
+
+function makeTagDefinition(
+  setItems: React.Dispatch<React.SetStateAction<TagItem[]>>,
+) {
+  return [
+    {
+      label: "Key",
+      control: (item: TagItem, itemIndex: number) => (
+        <Input
+          value={item.key}
+          onChange={({ detail }) =>
+            setItems((prev) =>
+              prev.map((t, i) =>
+                i === itemIndex ? { ...t, key: detail.value } : t,
+              ),
+            )
+          }
+          placeholder="env"
+        />
+      ),
+    },
+    {
+      label: "Value",
+      control: (item: TagItem, itemIndex: number) => (
+        <Input
+          value={item.value}
+          onChange={({ detail }) =>
+            setItems((prev) =>
+              prev.map((t, i) =>
+                i === itemIndex ? { ...t, value: detail.value } : t,
+              ),
+            )
+          }
+          placeholder="production"
+        />
+      ),
+    },
+  ];
+}
+
+function tagsToItems(tags: Record<string, string>): TagItem[] {
+  return Object.entries(tags).map(([key, value]) => ({ key, value }));
+}
+
+function itemsToTags(items: TagItem[]): Record<string, string> {
+  const tags: Record<string, string> = {};
+  for (const { key, value } of items) {
+    if (key.trim()) tags[key.trim()] = value.trim();
+  }
+  return tags;
+}
 
 const COLUMN_DEFINITIONS = [
   {
@@ -87,10 +144,14 @@ export default function SettingsPage() {
   const [serviceType, setServiceType] = useState<SelectProps.Option>(
     SERVICE_OPTIONS[0],
   );
+  const [tags, setTags] = useState<TagItem[]>([]);
 
   const [showEdit, setShowEdit] = useState(false);
   const [editName, setEditName] = useState("");
   const [editEndpointUrl, setEditEndpointUrl] = useState("");
+  const [editTags, setEditTags] = useState<TagItem[]>([]);
+
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const [selectedItems, setSelectedItems] = useState<Deployment[]>([]);
   const [flash, setFlash] = useState<FlashbarProps.MessageDefinition[]>([]);
@@ -111,6 +172,7 @@ export default function SettingsPage() {
         name: name.trim(),
         service_type: (serviceType.value ?? "crow_dns") as ServiceType,
         endpoint_url: endpointUrl.trim(),
+        tags: itemsToTags(tags),
       },
       {
         onSuccess: (d) => {
@@ -125,6 +187,7 @@ export default function SettingsPage() {
           setShowAdd(false);
           setName("");
           setEndpointUrl("");
+          setTags([]);
         },
         onError: (e) =>
           setFlash([
@@ -153,6 +216,7 @@ export default function SettingsPage() {
           },
         ]);
         setSelectedItems([]);
+        setShowDeleteConfirm(false);
       },
       onError: (e) =>
         setFlash([
@@ -171,6 +235,7 @@ export default function SettingsPage() {
     const target = selectedItems[0];
     setEditName(target.name);
     setEditEndpointUrl(target.endpoint_url);
+    setEditTags(tagsToItems(target.tags ?? {}));
     setShowEdit(true);
   };
 
@@ -178,7 +243,14 @@ export default function SettingsPage() {
     if (selectedItems.length === 0 || !editName.trim() || !editEndpointUrl.trim()) return;
     const target = selectedItems[0];
     updateDeployment.mutate(
-      { id: target.id, body: { name: editName.trim(), endpoint_url: editEndpointUrl.trim() } },
+      {
+        id: target.id,
+        body: {
+          name: editName.trim(),
+          endpoint_url: editEndpointUrl.trim(),
+          tags: itemsToTags(editTags),
+        },
+      },
       {
         onSuccess: (d) => {
           setFlash([
@@ -228,8 +300,7 @@ export default function SettingsPage() {
               <SpaceBetween direction="horizontal" size="xs">
                 <Button
                   disabled={selectedItems.length === 0}
-                  loading={deleteDeployment.isPending}
-                  onClick={handleDelete}
+                  onClick={() => setShowDeleteConfirm(true)}
                 >
                   Remove
                 </Button>
@@ -253,6 +324,33 @@ export default function SettingsPage() {
         empty="No deployments registered"
       />
 
+      {/* Delete confirmation */}
+      <Modal
+        visible={showDeleteConfirm}
+        onDismiss={() => setShowDeleteConfirm(false)}
+        header="Remove deployment"
+        footer={
+          <Box float="right">
+            <SpaceBetween direction="horizontal" size="xs">
+              <Button onClick={() => setShowDeleteConfirm(false)}>
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                onClick={handleDelete}
+                loading={deleteDeployment.isPending}
+              >
+                Remove
+              </Button>
+            </SpaceBetween>
+          </Box>
+        }
+      >
+        Permanently remove deployment{" "}
+        <strong>{selectedItems[0]?.name}</strong>? This action cannot be undone.
+      </Modal>
+
+      {/* Add deployment */}
       <Modal
         visible={showAdd}
         onDismiss={() => setShowAdd(false)}
@@ -301,9 +399,21 @@ export default function SettingsPage() {
               placeholder="https://dns-east.internal:8080"
             />
           </FormField>
+          <AttributeEditor
+            items={tags}
+            addButtonText="Add tag"
+            removeButtonText="Remove"
+            definition={makeTagDefinition(setTags)}
+            onAddButtonClick={() => setTags([...tags, { key: "", value: "" }])}
+            onRemoveButtonClick={({ detail }) =>
+              setTags(tags.filter((_, i) => i !== detail.itemIndex))
+            }
+            empty="No tags"
+          />
         </SpaceBetween>
       </Modal>
 
+      {/* Edit deployment */}
       <Modal
         visible={showEdit}
         onDismiss={() => setShowEdit(false)}
@@ -354,6 +464,19 @@ export default function SettingsPage() {
               onChange={({ detail }) => setEditEndpointUrl(detail.value)}
             />
           </FormField>
+          <AttributeEditor
+            items={editTags}
+            addButtonText="Add tag"
+            removeButtonText="Remove"
+            definition={makeTagDefinition(setEditTags)}
+            onAddButtonClick={() =>
+              setEditTags([...editTags, { key: "", value: "" }])
+            }
+            onRemoveButtonClick={({ detail }) =>
+              setEditTags(editTags.filter((_, i) => i !== detail.itemIndex))
+            }
+            empty="No tags"
+          />
         </SpaceBetween>
       </Modal>
     </SpaceBetween>
