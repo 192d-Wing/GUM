@@ -58,6 +58,18 @@ export interface FleetTopEntry {
   deployments: string[];
 }
 
+export interface AuditLog {
+  id: string;
+  timestamp: string;
+  actor_sub: string;
+  actor_name: string;
+  action: string;
+  resource_type: string;
+  resource_id: string;
+  resource_name: string;
+  details: Record<string, unknown>;
+}
+
 // =====================================================================
 // Crow DNS types (mirroring crow-server/src/api/)
 // =====================================================================

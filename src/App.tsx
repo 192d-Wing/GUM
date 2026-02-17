@@ -16,6 +16,7 @@ import NotFoundPage from "./pages/NotFoundPage";
 const FleetOverviewPage = lazy(() => import("./pages/FleetOverviewPage"));
 const FleetAnalyticsPage = lazy(() => import("./pages/FleetAnalyticsPage"));
 const SettingsPage = lazy(() => import("./pages/SettingsPage"));
+const AuditLogsPage = lazy(() => import("./pages/AuditLogsPage"));
 
 // Deployment index — dispatches to the right dashboard based on service type.
 const DeploymentIndexPage = lazy(() => import("./pages/DeploymentIndexPage"));
@@ -72,6 +73,7 @@ export default function App() {
               <Route index element={<FleetOverviewPage />} />
               <Route path="fleet-analytics" element={<FleetAnalyticsPage />} />
               <Route path="settings" element={<SettingsPage />} />
+              <Route path="audit-logs" element={<AuditLogsPage />} />
             </Route>
 
             {/* Deployment-scoped routes */}
