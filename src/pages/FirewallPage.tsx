@@ -1,3 +1,6 @@
+// Copyright 2026 U.S. Federal Government (in countries where recognized)
+// SPDX-License-Identifier: Apache-2.0
+
 import { useState, useEffect } from "react";
 import Header from "@cloudscape-design/components/header";
 import Container from "@cloudscape-design/components/container";

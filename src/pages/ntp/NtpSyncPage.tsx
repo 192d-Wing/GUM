@@ -1,3 +1,6 @@
+// Copyright 2026 U.S. Federal Government (in countries where recognized)
+// SPDX-License-Identifier: Apache-2.0
+
 import Container from "@cloudscape-design/components/container";
 import Header from "@cloudscape-design/components/header";
 import ColumnLayout from "@cloudscape-design/components/column-layout";

@@ -1,3 +1,6 @@
+// Copyright 2026 U.S. Federal Government (in countries where recognized)
+// SPDX-License-Identifier: Apache-2.0
+
 import { test, expect } from "@playwright/test";
 
 // Tests for navigating into a deployment's detail view.

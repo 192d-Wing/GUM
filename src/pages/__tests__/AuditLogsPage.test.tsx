@@ -1,3 +1,6 @@
+// Copyright 2026 U.S. Federal Government (in countries where recognized)
+// SPDX-License-Identifier: Apache-2.0
+
 vi.mock("../../hooks/useAuthorization", () => ({
   useIsAdmin: vi.fn(),
   useHasRole: vi.fn(),

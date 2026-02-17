@@ -1,3 +1,6 @@
+// Copyright 2026 U.S. Federal Government (in countries where recognized)
+// SPDX-License-Identifier: Apache-2.0
+
 /** Exponential backoff with full jitter, capped at MAX_DELAY. */
 export const BASE_DELAY = 1_000;
 export const MAX_DELAY = 60_000;

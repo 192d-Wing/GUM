@@ -1,3 +1,6 @@
+// Copyright 2026 U.S. Federal Government (in countries where recognized)
+// SPDX-License-Identifier: Apache-2.0
+
 import { useParams, useNavigate } from "react-router";
 import Table from "@cloudscape-design/components/table";
 import Header from "@cloudscape-design/components/header";

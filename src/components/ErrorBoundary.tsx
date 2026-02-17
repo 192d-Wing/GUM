@@ -1,3 +1,6 @@
+// Copyright 2026 U.S. Federal Government (in countries where recognized)
+// SPDX-License-Identifier: Apache-2.0
+
 import { Component, type ErrorInfo, type ReactNode } from "react";
 import Alert from "@cloudscape-design/components/alert";
 import Button from "@cloudscape-design/components/button";

@@ -1,3 +1,6 @@
+// Copyright 2026 U.S. Federal Government (in countries where recognized)
+// SPDX-License-Identifier: Apache-2.0
+
 import "@testing-library/jest-dom/vitest";
 
 // Polyfill localStorage for jsdom — Node 22+ ships a built-in localStorage

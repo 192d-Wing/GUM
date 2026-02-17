@@ -1,3 +1,6 @@
+// Copyright 2026 U.S. Federal Government (in countries where recognized)
+// SPDX-License-Identifier: Apache-2.0
+
 import { useQuery } from "@tanstack/react-query";
 import apiClient from "../client";
 import type { FleetTopEntry } from "../types";

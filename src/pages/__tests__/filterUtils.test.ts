@@ -1,3 +1,6 @@
+// Copyright 2026 U.S. Federal Government (in countries where recognized)
+// SPDX-License-Identifier: Apache-2.0
+
 import { describe, it, expect } from "vitest";
 import { matchesToken, matchesQuery } from "../filterUtils";
 import type { Deployment } from "../../api/types";

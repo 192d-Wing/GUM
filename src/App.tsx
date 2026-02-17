@@ -1,3 +1,6 @@
+// Copyright 2026 U.S. Federal Government (in countries where recognized)
+// SPDX-License-Identifier: Apache-2.0
+
 import { lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route } from "react-router";
 import Spinner from "@cloudscape-design/components/spinner";

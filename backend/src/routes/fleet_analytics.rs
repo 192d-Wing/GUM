@@ -1,3 +1,6 @@
+// Copyright 2026 U.S. Federal Government (in countries where recognized)
+// SPDX-License-Identifier: Apache-2.0
+
 use axum::extract::{Query, State};
 use axum::routing::get;
 use axum::{Json, Router};

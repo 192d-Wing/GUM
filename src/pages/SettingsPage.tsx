@@ -1,3 +1,6 @@
+// Copyright 2026 U.S. Federal Government (in countries where recognized)
+// SPDX-License-Identifier: Apache-2.0
+
 import React, { useState } from "react";
 import Table from "@cloudscape-design/components/table";
 import Header from "@cloudscape-design/components/header";
@@ -249,7 +252,12 @@ export default function SettingsPage() {
   };
 
   const handleEdit = () => {
-    if (selectedItems.length === 0 || !editName.trim() || !editEndpointUrl.trim()) return;
+    if (
+      selectedItems.length === 0 ||
+      !editName.trim() ||
+      !editEndpointUrl.trim()
+    )
+      return;
     const target = selectedItems[0];
     updateDeployment.mutate(
       {
@@ -355,8 +363,8 @@ export default function SettingsPage() {
           </Box>
         }
       >
-        Permanently remove deployment{" "}
-        <strong>{selectedItems[0]?.name}</strong>? This action cannot be undone.
+        Permanently remove deployment <strong>{selectedItems[0]?.name}</strong>?
+        This action cannot be undone.
       </Modal>
 
       {/* Add deployment */}

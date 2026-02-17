@@ -1,3 +1,6 @@
+// Copyright 2026 U.S. Federal Government (in countries where recognized)
+// SPDX-License-Identifier: Apache-2.0
+
 use crate::models::{Deployment, HealthStatus};
 
 /// Check reachability of a deployment by hitting its health/readiness endpoint.
