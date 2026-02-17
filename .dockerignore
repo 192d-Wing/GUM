@@ -1,0 +1,19 @@
+# Build artifacts
+dist/
+backend/target/
+node_modules/
+
+# Dev / editor files
+.git
+.github
+.claude
+.vscode
+*.md
+
+# Local config and data
+gum.toml
+*.db
+*.db-journal
+
+# Test and coverage
+coverage/

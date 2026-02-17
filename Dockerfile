@@ -22,11 +22,13 @@ RUN apk add --no-cache musl-dev openssl-dev pkgconfig
 
 WORKDIR /app/backend
 COPY backend/Cargo.toml backend/Cargo.lock* ./
-# Create a dummy main.rs to cache dependency compilation
-RUN mkdir src && echo "fn main() {}" > src/main.rs && cargo build --release 2>/dev/null || true
+# Create dummy lib+bin to cache dependency compilation
+RUN mkdir src && echo "fn main() {}" > src/main.rs && touch src/lib.rs \
+    && cargo build --release 2>/dev/null || true \
+    && rm -rf src
 # Now copy the real source and build
 COPY backend/src/ src/
-RUN touch src/main.rs && cargo build --release
+RUN cargo build --release
 
 # ─── Stage 3: Runtime ────────────────────────────────────────────────────────
 FROM alpine:3.23 AS runtime
