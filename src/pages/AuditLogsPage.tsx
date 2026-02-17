@@ -1,6 +1,11 @@
+import { useState } from "react";
 import Table from "@cloudscape-design/components/table";
 import Header from "@cloudscape-design/components/header";
 import TextFilter from "@cloudscape-design/components/text-filter";
+import SpaceBetween from "@cloudscape-design/components/space-between";
+import Container from "@cloudscape-design/components/container";
+import ColumnLayout from "@cloudscape-design/components/column-layout";
+import Box from "@cloudscape-design/components/box";
 import { useCollection } from "@cloudscape-design/collection-hooks";
 import { useAuditLogs } from "../api/hooks/useAuditLogs";
 import type { AuditLog } from "../api/types";
@@ -43,8 +48,18 @@ const COLUMN_DEFINITIONS = [
   },
 ];
 
+function DetailField({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <Box variant="awsui-key-label">{label}</Box>
+      <div>{children}</div>
+    </div>
+  );
+}
+
 export default function AuditLogsPage() {
   const { data: logs = [], isLoading } = useAuditLogs();
+  const [selectedItems, setSelectedItems] = useState<AuditLog[]>([]);
 
   const { items, filterProps, collectionProps } = useCollection(logs, {
     filtering: {
@@ -66,28 +81,62 @@ export default function AuditLogsPage() {
     },
   });
 
+  const selected = selectedItems[0];
+
   return (
-    <Table
-      {...collectionProps}
-      loading={isLoading}
-      loadingText="Loading audit logs..."
-      items={items}
-      columnDefinitions={COLUMN_DEFINITIONS}
-      header={
-        <Header
-          variant="h1"
-          counter={`(${logs.length})`}
-          description="Activity log for deployment operations"
-        >
-          Audit logs
-        </Header>
-      }
-      filter={
-        <TextFilter {...filterProps} filteringPlaceholder="Filter audit logs" />
-      }
-      stickyHeader
-      variant="full-page"
-      empty="No audit log entries"
-    />
+    <SpaceBetween size="l">
+      <Table
+        {...collectionProps}
+        loading={isLoading}
+        loadingText="Loading audit logs..."
+        items={items}
+        columnDefinitions={COLUMN_DEFINITIONS}
+        selectionType="single"
+        selectedItems={selectedItems}
+        onSelectionChange={({ detail }) =>
+          setSelectedItems(detail.selectedItems as AuditLog[])
+        }
+        header={
+          <Header
+            variant="h1"
+            counter={`(${logs.length})`}
+            description="Activity log for deployment operations"
+          >
+            Audit logs
+          </Header>
+        }
+        filter={
+          <TextFilter {...filterProps} filteringPlaceholder="Filter audit logs" />
+        }
+        stickyHeader
+        variant="full-page"
+        empty="No audit log entries"
+      />
+
+      {selected && (
+        <Container header={<Header variant="h2">Event details</Header>}>
+          <ColumnLayout columns={3} variant="text-grid">
+            <DetailField label="Timestamp">
+              {new Date(selected.timestamp).toLocaleString()}
+            </DetailField>
+            <DetailField label="Actor">{selected.actor_name}</DetailField>
+            <DetailField label="Actor ID">{selected.actor_sub}</DetailField>
+            <DetailField label="Action">{selected.action}</DetailField>
+            <DetailField label="Resource type">{selected.resource_type}</DetailField>
+            <DetailField label="Resource">{selected.resource_name}</DetailField>
+            <DetailField label="Resource ID">{selected.resource_id}</DetailField>
+          </ColumnLayout>
+          {Object.keys(selected.details).length > 0 && (
+            <Box margin={{ top: "l" }}>
+              <DetailField label="Details">
+                <Box variant="code">
+                  {JSON.stringify(selected.details, null, 2)}
+                </Box>
+              </DetailField>
+            </Box>
+          )}
+        </Container>
+      )}
+    </SpaceBetween>
   );
 }
