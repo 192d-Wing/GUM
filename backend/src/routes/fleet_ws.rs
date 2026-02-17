@@ -1,23 +1,20 @@
-use std::sync::Arc;
-use axum::extract::ws::{Message, WebSocket, WebSocketUpgrade};
+use axum::Router;
 use axum::extract::State;
+use axum::extract::ws::{Message, WebSocket, WebSocketUpgrade};
 use axum::response::Response;
 use axum::routing::get;
-use axum::Router;
 use futures_util::{SinkExt, StreamExt};
+use std::sync::Arc;
 use tokio::sync::mpsc;
 
-use crate::models::Deployment;
 use crate::AppState;
+use crate::models::Deployment;
 
 pub fn routes() -> Router<Arc<AppState>> {
     Router::new().route("/api/v1/fleet/ws", get(fleet_ws_handler))
 }
 
-async fn fleet_ws_handler(
-    ws: WebSocketUpgrade,
-    State(state): State<Arc<AppState>>,
-) -> Response {
+async fn fleet_ws_handler(ws: WebSocketUpgrade, State(state): State<Arc<AppState>>) -> Response {
     ws.on_upgrade(move |socket| handle_fleet_ws(socket, state))
 }
 

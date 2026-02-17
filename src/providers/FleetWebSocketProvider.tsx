@@ -8,7 +8,11 @@ import {
 } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "./AuthProvider";
-import type { FleetHealth, DeploymentHealthSummary, HealthStatus } from "../api/types";
+import type {
+  FleetHealth,
+  DeploymentHealthSummary,
+  HealthStatus,
+} from "../api/types";
 
 interface FleetWsContextValue {
   connected: boolean;
@@ -102,7 +106,11 @@ export function FleetWebSocketProvider({ children }: { children: ReactNode }) {
                   deployments: old.deployments.map(
                     (d: DeploymentHealthSummary) =>
                       d.id === deployment_id
-                        ? { ...d, health_status: "healthy" as HealthStatus, last_seen: new Date().toISOString() }
+                        ? {
+                            ...d,
+                            health_status: "healthy" as HealthStatus,
+                            last_seen: new Date().toISOString(),
+                          }
                         : d,
                   ),
                 };

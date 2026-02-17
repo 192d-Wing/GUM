@@ -1,48 +1,26 @@
-mod auth;
-mod config;
-mod db;
-mod error;
-mod middleware;
-mod models;
-mod proxy;
-mod routes;
-
-use std::sync::Arc;
 use axum::Router;
+use std::sync::Arc;
 use tokio::sync::RwLock;
 use tower_http::cors::{Any, CorsLayer};
 use tower_http::trace::TraceLayer;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
-pub struct AppState {
-    pub db: db::Db,
-    pub http_client: reqwest::Client,
-    pub config: config::AppConfig,
-    pub session_key: Vec<u8>,
-    /// OIDC provider metadata — None when OIDC is disabled (stub auth mode).
-    pub oidc_metadata: Option<auth::oidc::OidcProviderMetadata>,
-    /// Temporary storage for OIDC state (csrf_token → nonce string).
-    /// In production, consider Redis or DB-backed storage.
-    pub oidc_pending: RwLock<std::collections::HashMap<String, String>>,
-}
-
-impl AppState {
-    /// Returns true when OIDC is enabled and properly configured.
-    pub fn oidc_enabled(&self) -> bool {
-        self.oidc_metadata.is_some()
-    }
-}
+use gum_backend::{AppState, auth, config, db, models, proxy, routes};
 
 #[tokio::main]
 async fn main() {
     tracing_subscriber::registry()
-        .with(tracing_subscriber::EnvFilter::try_from_default_env()
-            .unwrap_or_else(|_| "gum_backend=debug,tower_http=debug".into()))
+        .with(
+            tracing_subscriber::EnvFilter::try_from_default_env()
+                .unwrap_or_else(|_| "gum_backend=debug,tower_http=debug".into()),
+        )
         .with(tracing_subscriber::fmt::layer())
         .init();
 
     let config = config::AppConfig::load().expect("failed to load configuration");
-    let db = db::Db::connect(&config.database_url).await.expect("failed to connect to database");
+    let db = db::Db::connect(&config.database_url)
+        .await
+        .expect("failed to connect to database");
     db.migrate().await.expect("failed to run migrations");
 
     let http_client = reqwest::Client::builder()
@@ -54,7 +32,10 @@ async fn main() {
 
     // Discover OIDC provider if configured
     let oidc_metadata = if config.oidc.enabled {
-        tracing::info!("OIDC enabled, discovering provider at {}", config.oidc.issuer_url);
+        tracing::info!(
+            "OIDC enabled, discovering provider at {}",
+            config.oidc.issuer_url
+        );
         match auth::oidc::discover(&http_client, &config.oidc.issuer_url).await {
             Ok(metadata) => {
                 tracing::info!("OIDC provider discovered: {}", metadata.issuer);
@@ -106,22 +87,25 @@ async fn main() {
         let static_path = std::path::PathBuf::from(&config.static_dir);
         if static_path.exists() {
             tracing::info!("Serving static files from {}", config.static_dir);
-            app = app
-                .fallback_service(
-                    tower_http::services::ServeDir::new(&config.static_dir)
-                        .fallback(tower_http::services::ServeFile::new(
-                            static_path.join("index.html"),
-                        )),
-                );
+            app = app.fallback_service(
+                tower_http::services::ServeDir::new(&config.static_dir).fallback(
+                    tower_http::services::ServeFile::new(static_path.join("index.html")),
+                ),
+            );
         } else {
-            tracing::warn!("static_dir '{}' does not exist, skipping", config.static_dir);
+            tracing::warn!(
+                "static_dir '{}' does not exist, skipping",
+                config.static_dir
+            );
         }
     }
 
     let bind_addr = format!("{}:{}", config.host, config.port);
     tracing::info!("GUM backend listening on {}", bind_addr);
 
-    let listener = tokio::net::TcpListener::bind(&bind_addr).await.expect("failed to bind");
+    let listener = tokio::net::TcpListener::bind(&bind_addr)
+        .await
+        .expect("failed to bind");
 
     // Graceful shutdown: listen for SIGTERM/SIGINT
     axum::serve(listener, app)
@@ -175,11 +159,8 @@ async fn health_poll_loop(state: Arc<AppState>, interval_secs: u64) {
         };
 
         for deployment in &deployments {
-            let status = proxy::client::check_deployment_health(
-                &state.http_client,
-                deployment,
-            )
-            .await;
+            let status =
+                proxy::client::check_deployment_health(&state.http_client, deployment).await;
 
             if status != deployment.health_status {
                 tracing::info!(
@@ -190,12 +171,8 @@ async fn health_poll_loop(state: Arc<AppState>, interval_secs: u64) {
                 );
             }
 
-            let _ = models::Deployment::update_health(
-                &state.db.pool,
-                &deployment.id,
-                &status,
-            )
-            .await;
+            let _ =
+                models::Deployment::update_health(&state.db.pool, &deployment.id, &status).await;
         }
     }
 }

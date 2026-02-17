@@ -49,7 +49,10 @@ const COLUMN_DEFINITIONS = [
     id: "health_status",
     header: "Status",
     cell: (item: Deployment) => {
-      const map: Record<HealthStatus, "success" | "warning" | "error" | "stopped"> = {
+      const map: Record<
+        HealthStatus,
+        "success" | "warning" | "error" | "stopped"
+      > = {
         healthy: "success",
         degraded: "warning",
         unhealthy: "error",
@@ -219,7 +222,10 @@ export default function SettingsPage() {
         }
       >
         <SpaceBetween size="m">
-          <FormField label="Name" description="A friendly name for this deployment">
+          <FormField
+            label="Name"
+            description="A friendly name for this deployment"
+          >
             <Input
               value={name}
               onChange={({ detail }) => setName(detail.value)}

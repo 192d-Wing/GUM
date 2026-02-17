@@ -1,6 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import apiClient from "../client";
-import type { RecordEntry, AddRecordRequest, DeleteRecordQuery } from "../types";
+import type {
+  RecordEntry,
+  AddRecordRequest,
+  DeleteRecordQuery,
+} from "../types";
 import { useDeploymentApiPrefix, useDeploymentId } from "../useDeploymentApi";
 
 export function useRecords(zoneName: string) {

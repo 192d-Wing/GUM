@@ -49,3 +49,54 @@ impl From<reqwest::Error> for AppError {
         Self::Proxy(e)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use axum::response::IntoResponse;
+
+    #[test]
+    fn not_found_is_404() {
+        let resp = AppError::NotFound("item".into()).into_response();
+        assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+    }
+
+    #[test]
+    fn bad_request_is_400() {
+        let resp = AppError::BadRequest("invalid".into()).into_response();
+        assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+    }
+
+    #[test]
+    fn internal_is_500() {
+        let resp = AppError::Internal("oops".into()).into_response();
+        assert_eq!(resp.status(), StatusCode::INTERNAL_SERVER_ERROR);
+    }
+
+    #[test]
+    fn display_formats() {
+        assert!(
+            AppError::NotFound("x".into())
+                .to_string()
+                .starts_with("not found:")
+        );
+        assert!(
+            AppError::BadRequest("x".into())
+                .to_string()
+                .starts_with("bad request:")
+        );
+        assert!(
+            AppError::Internal("x".into())
+                .to_string()
+                .starts_with("internal error:")
+        );
+    }
+
+    #[tokio::test]
+    async fn response_body_has_error_field() {
+        let resp = AppError::NotFound("missing".into()).into_response();
+        let body = axum::body::to_bytes(resp.into_body(), 10240).await.unwrap();
+        let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
+        assert_eq!(json["error"].as_str(), Some("missing"));
+    }
+}

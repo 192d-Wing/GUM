@@ -1,12 +1,12 @@
-use std::sync::Arc;
 use axum::extract::State;
 use axum::http::Request;
 use axum::middleware::Next;
 use axum::response::{IntoResponse, Response};
 use axum_extra::extract::CookieJar;
+use std::sync::Arc;
 
-use crate::routes::auth::extract_session;
 use crate::AppState;
+use crate::routes::auth::extract_session;
 
 /// Middleware that validates the session cookie for protected routes.
 /// When OIDC is disabled, all requests pass through (stub auth mode).
@@ -29,11 +29,7 @@ pub async fn require_auth(
                 "error": "authentication required",
                 "authenticated": false,
             });
-            (
-                axum::http::StatusCode::UNAUTHORIZED,
-                axum::Json(body),
-            )
-                .into_response()
+            (axum::http::StatusCode::UNAUTHORIZED, axum::Json(body)).into_response()
         }
     }
 }

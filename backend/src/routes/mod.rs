@@ -5,10 +5,10 @@ mod fleet_ws;
 mod health_overview;
 mod proxy;
 
-use std::sync::Arc;
-use axum::middleware as axum_mw;
-use axum::Router;
 use crate::AppState;
+use axum::Router;
+use axum::middleware as axum_mw;
+use std::sync::Arc;
 
 pub fn api_routes(state: Arc<AppState>) -> Router<Arc<AppState>> {
     // Protected routes — require valid session when OIDC is enabled

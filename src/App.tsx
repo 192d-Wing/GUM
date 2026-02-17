@@ -35,7 +35,9 @@ const ConfigPage = lazy(() => import("./pages/ConfigPage"));
 // Deployment-scoped pages — NTP (lazy).
 const NtpDashboardPage = lazy(() => import("./pages/ntp/NtpDashboardPage"));
 const NtpSourcesPage = lazy(() => import("./pages/ntp/NtpSourcesPage"));
-const NtpSourceDetailPage = lazy(() => import("./pages/ntp/NtpSourceDetailPage"));
+const NtpSourceDetailPage = lazy(
+  () => import("./pages/ntp/NtpSourceDetailPage"),
+);
 const NtpAccessPage = lazy(() => import("./pages/ntp/NtpAccessPage"));
 const NtpSyncPage = lazy(() => import("./pages/ntp/NtpSyncPage"));
 const NtpAnalyticsPage = lazy(() => import("./pages/ntp/NtpAnalyticsPage"));
@@ -99,7 +101,10 @@ export default function App() {
               {/* NTP routes */}
               <Route path="ntp-dashboard" element={<NtpDashboardPage />} />
               <Route path="sources" element={<NtpSourcesPage />} />
-              <Route path="sources/:sourceId" element={<NtpSourceDetailPage />} />
+              <Route
+                path="sources/:sourceId"
+                element={<NtpSourceDetailPage />}
+              />
               <Route path="access" element={<NtpAccessPage />} />
               <Route path="sync" element={<NtpSyncPage />} />
               <Route path="ntp-analytics" element={<NtpAnalyticsPage />} />

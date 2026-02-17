@@ -106,9 +106,7 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
   }, [isAuthenticated, queryClient]);
 
   return (
-    <WsContext.Provider value={{ connected }}>
-      {children}
-    </WsContext.Provider>
+    <WsContext.Provider value={{ connected }}>{children}</WsContext.Provider>
   );
 }
 

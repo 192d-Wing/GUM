@@ -1,18 +1,23 @@
-use std::sync::Arc;
 use axum::extract::{Path, State};
 use axum::routing::get;
 use axum::{Json, Router};
+use std::sync::Arc;
 
+use crate::AppState;
 use crate::error::AppError;
 use crate::models::{CreateDeploymentRequest, Deployment, UpdateDeploymentRequest};
-use crate::AppState;
 
 pub fn routes() -> Router<Arc<AppState>> {
     Router::new()
-        .route("/api/v1/deployments", get(list_deployments).post(create_deployment))
+        .route(
+            "/api/v1/deployments",
+            get(list_deployments).post(create_deployment),
+        )
         .route(
             "/api/v1/deployments/{id}",
-            get(get_deployment).put(update_deployment).delete(delete_deployment),
+            get(get_deployment)
+                .put(update_deployment)
+                .delete(delete_deployment),
         )
 }
 

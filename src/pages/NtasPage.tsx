@@ -53,12 +53,26 @@ export default function NtasPage() {
       { zone: newZone.trim() },
       {
         onSuccess: () => {
-          setFlash([{ type: "success", content: `NTA added for ${newZone.trim()}`, dismissible: true, onDismiss: () => setFlash([]) }]);
+          setFlash([
+            {
+              type: "success",
+              content: `NTA added for ${newZone.trim()}`,
+              dismissible: true,
+              onDismiss: () => setFlash([]),
+            },
+          ]);
           setShowAdd(false);
           setNewZone("");
         },
         onError: (e) =>
-          setFlash([{ type: "error", content: `Failed to add NTA: ${e.message}`, dismissible: true, onDismiss: () => setFlash([]) }]),
+          setFlash([
+            {
+              type: "error",
+              content: `Failed to add NTA: ${e.message}`,
+              dismissible: true,
+              onDismiss: () => setFlash([]),
+            },
+          ]),
       },
     );
   };
@@ -68,11 +82,25 @@ export default function NtasPage() {
     const zone = selectedItems[0].zone;
     deleteNta.mutate(zone, {
       onSuccess: () => {
-        setFlash([{ type: "success", content: `NTA removed for ${zone}`, dismissible: true, onDismiss: () => setFlash([]) }]);
+        setFlash([
+          {
+            type: "success",
+            content: `NTA removed for ${zone}`,
+            dismissible: true,
+            onDismiss: () => setFlash([]),
+          },
+        ]);
         setSelectedItems([]);
       },
       onError: (e) =>
-        setFlash([{ type: "error", content: `Failed to remove NTA: ${e.message}`, dismissible: true, onDismiss: () => setFlash([]) }]),
+        setFlash([
+          {
+            type: "error",
+            content: `Failed to remove NTA: ${e.message}`,
+            dismissible: true,
+            onDismiss: () => setFlash([]),
+          },
+        ]),
     });
   };
 

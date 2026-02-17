@@ -59,14 +59,17 @@ const COLUMN_DEFINITIONS = [
   {
     id: "created_at",
     header: "Created",
-    cell: (item: UserInfo) => new Date(item.created_at * 1000).toLocaleDateString(),
+    cell: (item: UserInfo) =>
+      new Date(item.created_at * 1000).toLocaleDateString(),
     sortingField: "created_at",
   },
   {
     id: "expires_at",
     header: "Expires",
     cell: (item: UserInfo) =>
-      item.expires_at ? new Date(item.expires_at * 1000).toLocaleDateString() : "Never",
+      item.expires_at
+        ? new Date(item.expires_at * 1000).toLocaleDateString()
+        : "Never",
   },
 ];
 
@@ -129,13 +132,27 @@ export default function UsersPage() {
       {
         onSuccess: (data) => {
           setCreatedToken(data.token);
-          setFlash([{ type: "success", content: `User "${data.username}" created`, dismissible: true, onDismiss: () => setFlash([]) }]);
+          setFlash([
+            {
+              type: "success",
+              content: `User "${data.username}" created`,
+              dismissible: true,
+              onDismiss: () => setFlash([]),
+            },
+          ]);
           setUsername("");
           setEmail("");
           setRoles("");
         },
         onError: (e) =>
-          setFlash([{ type: "error", content: `Failed to create user: ${e.message}`, dismissible: true, onDismiss: () => setFlash([]) }]),
+          setFlash([
+            {
+              type: "error",
+              content: `Failed to create user: ${e.message}`,
+              dismissible: true,
+              onDismiss: () => setFlash([]),
+            },
+          ]),
       },
     );
   };
@@ -211,9 +228,7 @@ export default function UsersPage() {
       >
         {createdToken ? (
           <SpaceBetween size="m">
-            <Box>
-              Copy the API token now — it will not be shown again.
-            </Box>
+            <Box>Copy the API token now — it will not be shown again.</Box>
             <CopyToClipboard
               variant="inline"
               textToCopy={createdToken}

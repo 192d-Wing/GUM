@@ -25,7 +25,9 @@ pub struct Deployment {
     pub auth_credential: Option<String>,
 }
 
-fn default_auth_type() -> DeploymentAuthType { DeploymentAuthType::None }
+fn default_auth_type() -> DeploymentAuthType {
+    DeploymentAuthType::None
+}
 
 #[derive(Debug, Deserialize)]
 pub struct CreateDeploymentRequest {
@@ -84,8 +86,7 @@ struct DeploymentRow {
 
 impl DeploymentRow {
     fn into_deployment(self) -> Deployment {
-        let tags: HashMap<String, String> =
-            serde_json::from_str(&self.tags).unwrap_or_default();
+        let tags: HashMap<String, String> = serde_json::from_str(&self.tags).unwrap_or_default();
         Deployment {
             id: self.id,
             name: self.name,
@@ -135,7 +136,10 @@ impl Deployment {
         let service_type = req.service_type.to_string();
         let health_status = HealthStatus::Unknown.to_string();
         let tags_json = serde_json::to_string(&req.tags).unwrap_or_else(|_| "{}".into());
-        let auth_type = req.auth_type.unwrap_or(DeploymentAuthType::None).to_string();
+        let auth_type = req
+            .auth_type
+            .unwrap_or(DeploymentAuthType::None)
+            .to_string();
 
         sqlx::query(
             "INSERT INTO deployments (id, name, service_type, endpoint_url, health_status, created_at, tags, auth_type, auth_credential) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
@@ -204,14 +208,12 @@ impl Deployment {
         let now = Utc::now().to_rfc3339();
         let status_str = status.to_string();
 
-        sqlx::query(
-            "UPDATE deployments SET health_status = ?, last_seen = ? WHERE id = ?"
-        )
-        .bind(&status_str)
-        .bind(&now)
-        .bind(id)
-        .execute(pool)
-        .await?;
+        sqlx::query("UPDATE deployments SET health_status = ?, last_seen = ? WHERE id = ?")
+            .bind(&status_str)
+            .bind(&now)
+            .bind(id)
+            .execute(pool)
+            .await?;
 
         Ok(())
     }
@@ -251,5 +253,189 @@ impl Deployment {
             unknown,
             deployments: summaries,
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::db::Db;
+    use std::collections::HashMap;
+
+    async fn test_pool() -> SqlitePool {
+        let db = Db::connect("sqlite::memory:").await.unwrap();
+        db.migrate().await.unwrap();
+        db.pool
+    }
+
+    fn make_create_request(name: &str) -> CreateDeploymentRequest {
+        CreateDeploymentRequest {
+            name: name.to_string(),
+            service_type: ServiceType::CrowDns,
+            endpoint_url: "https://example.com".to_string(),
+            tags: HashMap::new(),
+            auth_type: None,
+            auth_credential: None,
+        }
+    }
+
+    #[tokio::test]
+    async fn create_and_list() {
+        let pool = test_pool().await;
+        let req = make_create_request("my-deployment");
+        Deployment::create(&pool, req).await.unwrap();
+
+        let list = Deployment::list(&pool).await.unwrap();
+        assert_eq!(list.len(), 1);
+        assert_eq!(list[0].name, "my-deployment");
+    }
+
+    #[tokio::test]
+    async fn get_missing_id() {
+        let pool = test_pool().await;
+        let result = Deployment::get(&pool, "nonexistent-id").await;
+        assert!(matches!(result, Err(crate::error::AppError::NotFound(_))));
+    }
+
+    #[tokio::test]
+    async fn update_changes_name() {
+        let pool = test_pool().await;
+        let created = Deployment::create(&pool, make_create_request("original-name"))
+            .await
+            .unwrap();
+
+        let updated = Deployment::update(
+            &pool,
+            &created.id,
+            UpdateDeploymentRequest {
+                name: Some("new-name".to_string()),
+                endpoint_url: None,
+                tags: None,
+                auth_type: None,
+                auth_credential: None,
+            },
+        )
+        .await
+        .unwrap();
+
+        assert_eq!(updated.name, "new-name");
+    }
+
+    #[tokio::test]
+    async fn update_preserves_unspecified_fields() {
+        let pool = test_pool().await;
+
+        let mut tags = HashMap::new();
+        tags.insert("env".to_string(), "prod".to_string());
+        tags.insert("region".to_string(), "us-east".to_string());
+
+        let req = CreateDeploymentRequest {
+            name: "tagged-deployment".to_string(),
+            service_type: ServiceType::Ntp,
+            endpoint_url: "https://ntp.example.com".to_string(),
+            tags,
+            auth_type: None,
+            auth_credential: None,
+        };
+        let created = Deployment::create(&pool, req).await.unwrap();
+
+        // Update only the name, leaving tags unspecified (None)
+        let updated = Deployment::update(
+            &pool,
+            &created.id,
+            UpdateDeploymentRequest {
+                name: Some("renamed".to_string()),
+                endpoint_url: None,
+                tags: None,
+                auth_type: None,
+                auth_credential: None,
+            },
+        )
+        .await
+        .unwrap();
+
+        assert_eq!(updated.name, "renamed");
+        assert_eq!(updated.tags.get("env").unwrap(), "prod");
+        assert_eq!(updated.tags.get("region").unwrap(), "us-east");
+        assert_eq!(updated.endpoint_url, "https://ntp.example.com");
+    }
+
+    #[tokio::test]
+    async fn delete_removes_deployment() {
+        let pool = test_pool().await;
+        let created = Deployment::create(&pool, make_create_request("to-delete"))
+            .await
+            .unwrap();
+
+        Deployment::delete(&pool, &created.id).await.unwrap();
+
+        let list = Deployment::list(&pool).await.unwrap();
+        assert!(list.is_empty());
+    }
+
+    #[tokio::test]
+    async fn delete_missing_id() {
+        let pool = test_pool().await;
+        let result = Deployment::delete(&pool, "nonexistent-id").await;
+        assert!(matches!(result, Err(crate::error::AppError::NotFound(_))));
+    }
+
+    #[tokio::test]
+    async fn fleet_health_counts_by_status() {
+        let pool = test_pool().await;
+
+        let d1 = Deployment::create(&pool, make_create_request("deploy-alpha"))
+            .await
+            .unwrap();
+        let d2 = Deployment::create(&pool, make_create_request("deploy-beta"))
+            .await
+            .unwrap();
+        let d3 = Deployment::create(&pool, make_create_request("deploy-gamma"))
+            .await
+            .unwrap();
+
+        Deployment::update_health(&pool, &d1.id, &HealthStatus::Healthy)
+            .await
+            .unwrap();
+        Deployment::update_health(&pool, &d2.id, &HealthStatus::Unhealthy)
+            .await
+            .unwrap();
+        Deployment::update_health(&pool, &d3.id, &HealthStatus::Degraded)
+            .await
+            .unwrap();
+
+        let health = Deployment::fleet_health(&pool).await.unwrap();
+
+        assert_eq!(health.total, 3);
+        assert_eq!(health.healthy, 1);
+        assert_eq!(health.unhealthy, 1);
+        assert_eq!(health.degraded, 1);
+        assert_eq!(health.unknown, 0);
+    }
+
+    #[tokio::test]
+    async fn into_deployment_malformed_json_tags() {
+        let pool = test_pool().await;
+
+        // Insert a raw row with malformed JSON in the tags column
+        sqlx::query(
+            "INSERT INTO deployments (id, name, service_type, endpoint_url, health_status, created_at, tags, auth_type, auth_credential) \
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+        )
+        .bind("bad-tags-id")
+        .bind("bad-tags-deploy")
+        .bind("crow_dns")
+        .bind("https://example.com")
+        .bind("unknown")
+        .bind("2025-01-01T00:00:00Z")
+        .bind("NOT VALID JSON {{{")
+        .bind("none")
+        .bind(Option::<String>::None)
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        let deployment = Deployment::get(&pool, "bad-tags-id").await.unwrap();
+        assert!(deployment.tags.is_empty());
     }
 }

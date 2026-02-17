@@ -1,12 +1,12 @@
-use std::sync::Arc;
 use axum::extract::State;
 use axum::routing::get;
 use axum::{Json, Router};
 use serde_json::json;
+use std::sync::Arc;
 
+use crate::AppState;
 use crate::error::AppError;
 use crate::models::{Deployment, FleetHealth};
-use crate::AppState;
 
 /// Fleet health routes (protected — require auth).
 pub fn routes() -> Router<Arc<AppState>> {
@@ -20,9 +20,7 @@ pub fn health_routes() -> Router<Arc<AppState>> {
         .route("/health/live", get(liveness))
 }
 
-async fn fleet_health(
-    State(state): State<Arc<AppState>>,
-) -> Result<Json<FleetHealth>, AppError> {
+async fn fleet_health(State(state): State<Arc<AppState>>) -> Result<Json<FleetHealth>, AppError> {
     let health = Deployment::fleet_health(&state.db.pool).await?;
     Ok(Json(health))
 }

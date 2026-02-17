@@ -20,9 +20,7 @@ export default function NtpSyncPage() {
 
   if (isError || !sync) {
     return (
-      <StatusIndicator type="error">
-        Failed to load sync status
-      </StatusIndicator>
+      <StatusIndicator type="error">Failed to load sync status</StatusIndicator>
     );
   }
 

@@ -20,9 +20,7 @@ export default function TopNav() {
       type: "menu-dropdown",
       text: user?.name ?? "User",
       description: user?.email ?? "",
-      items: [
-        { id: "signout", text: "Sign out" },
-      ],
+      items: [{ id: "signout", text: "Sign out" }],
       onItemClick: ({ detail }) => {
         if (detail.id === "signout") {
           logout();

@@ -27,7 +27,7 @@ const mockGet = apiClient.get as ReturnType<typeof vi.fn>;
 const TEST_DEPLOYMENT: Deployment = {
   id: "test-deploy-1",
   name: "test-dns",
-  service_type: "CrowDns",
+  service_type: "crow_dns",
   endpoint_url: "http://localhost:8080",
   health_status: "healthy",
   last_seen: new Date().toISOString(),
@@ -47,7 +47,12 @@ const MOCK_STATS: ServerStats = {
 
 function renderDashboard(preloadStats?: ServerStats) {
   mockGet.mockResolvedValue({
-    data: { authenticated: true, name: "Test User", email: "test@example.com", roles: [] },
+    data: {
+      authenticated: true,
+      name: "Test User",
+      email: "test@example.com",
+      roles: [],
+    },
   });
 
   const qc = new QueryClient({
@@ -90,7 +95,10 @@ describe("DashboardPage", () => {
 
   it("shows loading spinner when no cached data", () => {
     renderDashboard();
-    expect(document.querySelector('[class*="spinner"]') || screen.queryByText("Dashboard") === null).toBeTruthy();
+    expect(
+      document.querySelector('[class*="spinner"]') ||
+        screen.queryByText("Dashboard") === null,
+    ).toBeTruthy();
   });
 
   it("computes hit rate correctly for edge cases", async () => {

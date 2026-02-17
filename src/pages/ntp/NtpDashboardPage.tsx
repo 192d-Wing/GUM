@@ -9,8 +9,16 @@ import { useNtpStats } from "../../api/hooks/useNtpStats";
 import { useNtpSync } from "../../api/hooks/useNtpSync";
 
 export default function NtpDashboardPage() {
-  const { data: stats, isLoading: statsLoading, isError: statsError } = useNtpStats(5000);
-  const { data: sync, isLoading: syncLoading, isError: syncError } = useNtpSync(5000);
+  const {
+    data: stats,
+    isLoading: statsLoading,
+    isError: statsError,
+  } = useNtpStats(5000);
+  const {
+    data: sync,
+    isLoading: syncLoading,
+    isError: syncError,
+  } = useNtpSync(5000);
 
   if (statsLoading || syncLoading) {
     return (
@@ -40,7 +48,9 @@ export default function NtpDashboardPage() {
               <Box variant="awsui-key-label">Synchronized</Box>
               <Box>
                 {sync ? (
-                  <StatusIndicator type={sync.synchronized ? "success" : "error"}>
+                  <StatusIndicator
+                    type={sync.synchronized ? "success" : "error"}
+                  >
                     {sync.synchronized ? "Yes" : "No"}
                   </StatusIndicator>
                 ) : (

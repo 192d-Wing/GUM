@@ -1,6 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import apiClient from "../client";
-import type { NtaListResponse, AddNtaRequest, NtaActionResponse } from "../types";
+import type {
+  NtaListResponse,
+  AddNtaRequest,
+  NtaActionResponse,
+} from "../types";
 import { useDeploymentApiPrefix, useDeploymentId } from "../useDeploymentApi";
 
 export function useNtas() {

@@ -66,7 +66,9 @@ export default function ConfigPage() {
           <Container
             header={
               <Header variant="h2">
-                <StatusIndicator type={lastReload.success ? "success" : "warning"}>
+                <StatusIndicator
+                  type={lastReload.success ? "success" : "warning"}
+                >
                   {lastReload.message}
                 </StatusIndicator>
               </Header>
@@ -102,7 +104,10 @@ export default function ConfigPage() {
                 },
               ]}
               header={
-                <Header variant="h2" counter={`(${lastReload.failed_zones.length})`}>
+                <Header
+                  variant="h2"
+                  counter={`(${lastReload.failed_zones.length})`}
+                >
                   Failed zones
                 </Header>
               }
@@ -145,8 +150,8 @@ export default function ConfigPage() {
 
       {!lastReload && (
         <Box color="text-status-inactive" textAlign="center" padding="xxl">
-          Click "Reload configuration" to refresh zones, certificates, and policies
-          from disk.
+          Click "Reload configuration" to refresh zones, certificates, and
+          policies from disk.
         </Box>
       )}
     </SpaceBetween>

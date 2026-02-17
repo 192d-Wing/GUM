@@ -14,18 +14,18 @@ import type { PropertyFilterProps } from "@cloudscape-design/components/property
 import { useDeployments } from "../api/hooks/useDeployments";
 import { useFleetHealth } from "../api/hooks/useFleetHealth";
 import type { Deployment, HealthStatus, ServiceType } from "../api/types";
+import { matchesQuery } from "./filterUtils";
 
 function healthIndicator(status: HealthStatus) {
-  const map: Record<HealthStatus, "success" | "warning" | "error" | "stopped"> = {
-    healthy: "success",
-    degraded: "warning",
-    unhealthy: "error",
-    unknown: "stopped",
-  };
+  const map: Record<HealthStatus, "success" | "warning" | "error" | "stopped"> =
+    {
+      healthy: "success",
+      degraded: "warning",
+      unhealthy: "error",
+      unknown: "stopped",
+    };
   return (
-    <StatusIndicator type={map[status] ?? "stopped"}>
-      {status}
-    </StatusIndicator>
+    <StatusIndicator type={map[status] ?? "stopped"}>{status}</StatusIndicator>
   );
 }
 
@@ -59,57 +59,6 @@ const FILTERING_PROPERTIES: PropertyFilterProps.FilteringProperty[] = [
     groupValuesLabel: "Tag values",
   },
 ];
-
-function matchesToken(deployment: Deployment, token: PropertyFilterProps.Token): boolean {
-  const { propertyKey, operator, value } = token;
-
-  if (!propertyKey) {
-    // Free-text search — match against name
-    const name = deployment.name.toLowerCase();
-    const v = value.toLowerCase();
-    return name.includes(v);
-  }
-
-  let fieldValue: string;
-  if (propertyKey === "tag") {
-    // Tag filter: value format is "key=value" or just "value" that matches any tag
-    const tagStr = Object.entries(deployment.tags)
-      .map(([k, v]) => `${k}=${v}`)
-      .join(" ");
-    fieldValue = tagStr.toLowerCase();
-    const v = value.toLowerCase();
-    switch (operator) {
-      case "=": return fieldValue.includes(v);
-      case "!=": return !fieldValue.includes(v);
-      case ":": return fieldValue.includes(v);
-      case "!:": return !fieldValue.includes(v);
-      default: return true;
-    }
-  }
-
-  fieldValue = (deployment[propertyKey as keyof Deployment] as string) ?? "";
-
-  switch (operator) {
-    case "=": return fieldValue === value;
-    case "!=": return fieldValue !== value;
-    case ":": return fieldValue.toLowerCase().includes(value.toLowerCase());
-    case "!:": return !fieldValue.toLowerCase().includes(value.toLowerCase());
-    default: return true;
-  }
-}
-
-function matchesQuery(
-  deployment: Deployment,
-  query: PropertyFilterProps.Query,
-): boolean {
-  const { tokens, operation } = query;
-  if (tokens.length === 0) return true;
-
-  if (operation === "and") {
-    return tokens.every((t) => matchesToken(deployment, t));
-  }
-  return tokens.some((t) => matchesToken(deployment, t));
-}
 
 export default function FleetOverviewPage() {
   const navigate = useNavigate();
@@ -195,7 +144,8 @@ export default function FleetOverviewPage() {
             filteringOptions={filteringOptions}
             i18nStrings={{
               filteringAriaLabel: "Filter deployments",
-              filteringPlaceholder: "Filter by service type, health status, name, or tag",
+              filteringPlaceholder:
+                "Filter by service type, health status, name, or tag",
               groupValuesText: "Values",
               groupPropertiesText: "Properties",
               operatorsText: "Operators",
@@ -235,14 +185,16 @@ export default function FleetOverviewPage() {
             {
               id: "status",
               header: "Status",
-              content: (item: Deployment) => healthIndicator(item.health_status),
+              content: (item: Deployment) =>
+                healthIndicator(item.health_status),
             },
             {
               id: "tags",
               header: "Tags",
               content: (item: Deployment) => {
                 const entries = Object.entries(item.tags);
-                if (entries.length === 0) return <Box color="text-body-secondary">None</Box>;
+                if (entries.length === 0)
+                  return <Box color="text-body-secondary">None</Box>;
                 return (
                   <SpaceBetween direction="horizontal" size="xs">
                     {entries.map(([k, v]) => (
@@ -275,10 +227,7 @@ export default function FleetOverviewPage() {
           <Header
             counter={`(${filteredDeployments.length})`}
             actions={
-              <Button
-                variant="primary"
-                onClick={() => navigate("/settings")}
-              >
+              <Button variant="primary" onClick={() => navigate("/settings")}>
                 Manage deployments
               </Button>
             }

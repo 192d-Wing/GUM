@@ -1,18 +1,24 @@
-use std::collections::HashMap;
-use std::sync::Arc;
 use axum::extract::{Query, State};
 use axum::routing::get;
 use axum::{Json, Router};
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use std::sync::Arc;
 
+use crate::AppState;
 use crate::error::AppError;
 use crate::models::{Deployment, DeploymentAuthType, HealthStatus};
-use crate::AppState;
 
 pub fn routes() -> Router<Arc<AppState>> {
     Router::new()
-        .route("/api/v1/fleet/analytics/top-queries", get(fleet_top_queries))
-        .route("/api/v1/fleet/analytics/top-clients", get(fleet_top_clients))
+        .route(
+            "/api/v1/fleet/analytics/top-queries",
+            get(fleet_top_queries),
+        )
+        .route(
+            "/api/v1/fleet/analytics/top-clients",
+            get(fleet_top_clients),
+        )
 }
 
 #[derive(Debug, Deserialize)]
@@ -70,7 +76,9 @@ async fn fan_out_analytics(
     // Only query healthy deployments
     let healthy: Vec<_> = deployments
         .into_iter()
-        .filter(|d| d.health_status == HealthStatus::Healthy || d.health_status == HealthStatus::Degraded)
+        .filter(|d| {
+            d.health_status == HealthStatus::Healthy || d.health_status == HealthStatus::Degraded
+        })
         .collect();
 
     // Fan out requests concurrently

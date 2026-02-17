@@ -1,4 +1,4 @@
-use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
+use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
 use chrono::{DateTime, Duration, Utc};
 use hmac::{Hmac, Mac};
 use serde::{Deserialize, Serialize};
@@ -91,5 +91,92 @@ impl std::fmt::Display for SessionError {
             Self::InvalidKey => write!(f, "invalid session key"),
             Self::Expired => write!(f, "session expired"),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use chrono::{Duration, Utc};
+
+    fn test_key() -> Vec<u8> {
+        b"test-key-for-session-testing-32b".to_vec()
+    }
+
+    fn sample_session() -> Session {
+        Session::new(
+            "user-123".into(),
+            "Alice".into(),
+            "alice@example.com".into(),
+            vec!["admin".into(), "viewer".into()],
+        )
+    }
+
+    #[test]
+    fn encode_decode_round_trip() {
+        let key = test_key();
+        let session = sample_session();
+        let cookie = session.encode(&key).unwrap();
+        let decoded = Session::decode(&cookie, &key).unwrap();
+        assert_eq!(decoded.sub, "user-123");
+        assert_eq!(decoded.name, "Alice");
+        assert_eq!(decoded.email, "alice@example.com");
+        assert_eq!(decoded.roles, vec!["admin", "viewer"]);
+    }
+
+    #[test]
+    fn decode_wrong_key_returns_invalid_signature() {
+        let session = sample_session();
+        let cookie = session.encode(&test_key()).unwrap();
+        let wrong_key = b"wrong-key-for-session-testing-32".to_vec();
+        let result = Session::decode(&cookie, &wrong_key);
+        assert!(matches!(result, Err(SessionError::InvalidSignature)));
+    }
+
+    #[test]
+    fn decode_tampered_payload_returns_error() {
+        let session = sample_session();
+        let cookie = session.encode(&test_key()).unwrap();
+        let parts: Vec<&str> = cookie.splitn(2, '.').collect();
+        // Tamper with the payload by replacing first char
+        let tampered = format!("X{}.{}", &parts[0][1..], parts[1]);
+        let result = Session::decode(&tampered, &test_key());
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn decode_no_dot_separator_returns_malformed() {
+        let result = Session::decode("nodothere", &test_key());
+        assert!(matches!(result, Err(SessionError::MalformedCookie)));
+    }
+
+    #[test]
+    fn decode_bad_base64_returns_malformed() {
+        let result = Session::decode("!!!.!!!", &test_key());
+        assert!(matches!(result, Err(SessionError::MalformedCookie)));
+    }
+
+    #[test]
+    fn decode_expired_session_returns_expired() {
+        let key = test_key();
+        let mut session = sample_session();
+        session.expires_at = Utc::now() - Duration::hours(1);
+        let cookie = session.encode(&key).unwrap();
+        let result = Session::decode(&cookie, &key);
+        assert!(matches!(result, Err(SessionError::Expired)));
+    }
+
+    #[test]
+    fn is_expired_false_for_new_session() {
+        let session = sample_session();
+        assert!(!session.is_expired());
+    }
+
+    #[test]
+    fn session_error_display() {
+        assert!(!SessionError::MalformedCookie.to_string().is_empty());
+        assert!(!SessionError::InvalidSignature.to_string().is_empty());
+        assert!(!SessionError::InvalidKey.to_string().is_empty());
+        assert!(!SessionError::Expired.to_string().is_empty());
     }
 }

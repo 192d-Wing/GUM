@@ -50,7 +50,10 @@ export default function NtpSourceDetailPage() {
       <BreadcrumbGroup
         items={[
           { text: "Sources", href: path("sources") },
-          { text: source.address, href: path(`sources/${encodeURIComponent(source.id)}`) },
+          {
+            text: source.address,
+            href: path(`sources/${encodeURIComponent(source.id)}`),
+          },
         ]}
         onFollow={(event) => {
           event.preventDefault();

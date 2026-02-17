@@ -56,7 +56,9 @@ function DomainListEditor({
   if (isError) {
     return (
       <Container header={<Header variant="h2">{title}</Header>}>
-        <StatusIndicator type="error">Failed to load {title.toLowerCase()}</StatusIndicator>
+        <StatusIndicator type="error">
+          Failed to load {title.toLowerCase()}
+        </StatusIndicator>
       </Container>
     );
   }
@@ -118,9 +120,23 @@ export default function FirewallPage() {
       { domains },
       {
         onSuccess: () =>
-          setFlash([{ type: "success", content: "Blocklist updated", dismissible: true, onDismiss: () => setFlash([]) }]),
+          setFlash([
+            {
+              type: "success",
+              content: "Blocklist updated",
+              dismissible: true,
+              onDismiss: () => setFlash([]),
+            },
+          ]),
         onError: (e) =>
-          setFlash([{ type: "error", content: `Failed to update blocklist: ${e.message}`, dismissible: true, onDismiss: () => setFlash([]) }]),
+          setFlash([
+            {
+              type: "error",
+              content: `Failed to update blocklist: ${e.message}`,
+              dismissible: true,
+              onDismiss: () => setFlash([]),
+            },
+          ]),
       },
     );
   };
@@ -130,16 +146,33 @@ export default function FirewallPage() {
       { domains },
       {
         onSuccess: () =>
-          setFlash([{ type: "success", content: "Allowlist updated", dismissible: true, onDismiss: () => setFlash([]) }]),
+          setFlash([
+            {
+              type: "success",
+              content: "Allowlist updated",
+              dismissible: true,
+              onDismiss: () => setFlash([]),
+            },
+          ]),
         onError: (e) =>
-          setFlash([{ type: "error", content: `Failed to update allowlist: ${e.message}`, dismissible: true, onDismiss: () => setFlash([]) }]),
+          setFlash([
+            {
+              type: "error",
+              content: `Failed to update allowlist: ${e.message}`,
+              dismissible: true,
+              onDismiss: () => setFlash([]),
+            },
+          ]),
       },
     );
   };
 
   return (
     <SpaceBetween size="l">
-      <Header variant="h1" description="DNS firewall blocklist and allowlist management">
+      <Header
+        variant="h1"
+        description="DNS firewall blocklist and allowlist management"
+      >
         Firewall
       </Header>
       <Flashbar items={flash} />

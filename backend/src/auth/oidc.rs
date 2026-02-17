@@ -1,4 +1,4 @@
-use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
+use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
@@ -149,4 +149,112 @@ pub struct OidcUserInfo {
     pub name: String,
     pub email: String,
     pub roles: Vec<String>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
+    use serde_json::json;
+
+    fn test_metadata() -> OidcProviderMetadata {
+        OidcProviderMetadata {
+            authorization_endpoint: "https://idp.example.com/authorize".into(),
+            token_endpoint: "https://idp.example.com/token".into(),
+            userinfo_endpoint: None,
+            issuer: "https://idp.example.com".into(),
+        }
+    }
+
+    fn test_oidc_config() -> OidcConfig {
+        OidcConfig {
+            enabled: true,
+            issuer_url: "https://idp.example.com".into(),
+            client_id: "my-client".into(),
+            client_secret: "secret".into(),
+            redirect_uri: "http://localhost:4000/api/v1/auth/oidc/callback".into(),
+            scopes: "openid profile email".into(),
+            roles_claim: "roles".into(),
+        }
+    }
+
+    fn make_jwt(claims: &serde_json::Value) -> String {
+        let header = URL_SAFE_NO_PAD.encode(b"{\"alg\":\"RS256\",\"typ\":\"JWT\"}");
+        let payload = URL_SAFE_NO_PAD.encode(claims.to_string().as_bytes());
+        format!("{header}.{payload}.fake-signature")
+    }
+
+    #[test]
+    fn build_auth_url_contains_all_params() {
+        let url = build_auth_url(
+            &test_metadata(),
+            &test_oidc_config(),
+            "state123",
+            "nonce456",
+        );
+        assert!(url.starts_with("https://idp.example.com/authorize?"));
+        assert!(url.contains("client_id=my-client"));
+        assert!(url.contains("response_type=code"));
+        assert!(url.contains("state=state123"));
+        assert!(url.contains("nonce=nonce456"));
+        assert!(url.contains("redirect_uri="));
+    }
+
+    #[test]
+    fn build_auth_url_encodes_spaces() {
+        let url = build_auth_url(&test_metadata(), &test_oidc_config(), "s", "n");
+        assert!(url.contains("scope=openid+profile+email"));
+    }
+
+    #[test]
+    fn extract_user_info_standard_claims() {
+        let claims = json!({
+            "sub": "user-42",
+            "name": "Alice",
+            "email": "alice@example.com",
+            "roles": ["admin", "viewer"]
+        });
+        let jwt = make_jwt(&claims);
+        let info = extract_user_info(&jwt, "roles").unwrap();
+        assert_eq!(info.sub, "user-42");
+        assert_eq!(info.name, "Alice");
+        assert_eq!(info.email, "alice@example.com");
+        assert_eq!(info.roles, vec!["admin", "viewer"]);
+    }
+
+    #[test]
+    fn extract_user_info_preferred_username_fallback() {
+        let claims = json!({
+            "sub": "user-99",
+            "preferred_username": "bob",
+            "email": "bob@example.com"
+        });
+        let jwt = make_jwt(&claims);
+        let info = extract_user_info(&jwt, "roles").unwrap();
+        assert_eq!(info.name, "bob");
+    }
+
+    #[test]
+    fn extract_user_info_malformed_jwt() {
+        let result = extract_user_info("not-a-jwt", "roles");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn extract_roles_from_array() {
+        let claims = json!({ "roles": ["admin", "viewer"] });
+        assert_eq!(extract_roles(&claims, "roles"), vec!["admin", "viewer"]);
+    }
+
+    #[test]
+    fn extract_roles_nested_dot_path() {
+        let claims = json!({ "realm_access": { "roles": ["admin"] } });
+        assert_eq!(extract_roles(&claims, "realm_access.roles"), vec!["admin"]);
+    }
+
+    #[test]
+    fn extract_roles_comma_separated_string() {
+        let claims = json!({ "roles": "admin,viewer" });
+        assert_eq!(extract_roles(&claims, "roles"), vec!["admin", "viewer"]);
+    }
 }

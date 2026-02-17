@@ -55,7 +55,9 @@ class MockWebSocket {
 
 function StatusConsumer() {
   const { connected } = useWsStatus();
-  return <span data-testid="ws">{connected ? "connected" : "disconnected"}</span>;
+  return (
+    <span data-testid="ws">{connected ? "connected" : "disconnected"}</span>
+  );
 }
 
 function renderWithProviders(authenticated: boolean) {
@@ -184,7 +186,10 @@ describe("WebSocketProvider", () => {
       }),
     );
 
-    const cached = qc.getQueryData(["health", "targets"]) as Record<string, unknown>;
+    const cached = qc.getQueryData(["health", "targets"]) as Record<
+      string,
+      unknown
+    >;
     expect(cached).toBeDefined();
     expect((cached as { targets: unknown[] }).targets).toHaveLength(1);
   });

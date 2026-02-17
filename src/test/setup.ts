@@ -2,17 +2,25 @@ import "@testing-library/jest-dom/vitest";
 
 // Polyfill localStorage for jsdom — Node 22+ ships a built-in localStorage
 // that conflicts with jsdom when no --localstorage-file is provided.
-if (typeof localStorage === "undefined" || typeof localStorage.getItem !== "function") {
+if (
+  typeof localStorage === "undefined" ||
+  typeof localStorage.getItem !== "function"
+) {
   const store = new Map<string, string>();
   const storage = {
     getItem: (key: string) => store.get(key) ?? null,
     setItem: (key: string, value: string) => store.set(key, String(value)),
     removeItem: (key: string) => store.delete(key),
     clear: () => store.clear(),
-    get length() { return store.size; },
+    get length() {
+      return store.size;
+    },
     key: (index: number) => [...store.keys()][index] ?? null,
   };
-  Object.defineProperty(globalThis, "localStorage", { value: storage, writable: true });
+  Object.defineProperty(globalThis, "localStorage", {
+    value: storage,
+    writable: true,
+  });
 }
 
 // Mock matchMedia for ThemeProvider tests.

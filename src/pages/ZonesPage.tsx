@@ -79,7 +79,10 @@ export default function ZonesPage() {
     },
     pagination: { pageSize: 25 },
     sorting: {
-      defaultState: { sortingColumn: COLUMN_DEFINITIONS[0], isDescending: false },
+      defaultState: {
+        sortingColumn: COLUMN_DEFINITIONS[0],
+        isDescending: false,
+      },
     },
     selection: {},
   });
@@ -96,7 +99,9 @@ export default function ZonesPage() {
       onSelectionChange={({ detail }) =>
         setSelectedItems(detail.selectedItems as ZoneSummary[])
       }
-      onRowClick={({ detail }) => navigate(path(`zones/${encodeURIComponent(detail.item.name)}`))}
+      onRowClick={({ detail }) =>
+        navigate(path(`zones/${encodeURIComponent(detail.item.name)}`))
+      }
       header={
         <Header
           variant="h1"
@@ -107,7 +112,11 @@ export default function ZonesPage() {
                 disabled={selectedItems.length === 0}
                 onClick={() => {
                   if (selectedItems[0]) {
-                    navigate(path(`zones/${encodeURIComponent(selectedItems[0].name)}`));
+                    navigate(
+                      path(
+                        `zones/${encodeURIComponent(selectedItems[0].name)}`,
+                      ),
+                    );
                   }
                 }}
               >

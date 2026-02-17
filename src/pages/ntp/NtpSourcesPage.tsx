@@ -82,7 +82,10 @@ export default function NtpSourcesPage() {
     },
     pagination: { pageSize: 25 },
     sorting: {
-      defaultState: { sortingColumn: COLUMN_DEFINITIONS[0], isDescending: false },
+      defaultState: {
+        sortingColumn: COLUMN_DEFINITIONS[0],
+        isDescending: false,
+      },
     },
     selection: {},
   });
@@ -112,7 +115,11 @@ export default function NtpSourcesPage() {
                 disabled={selectedItems.length === 0}
                 onClick={() => {
                   if (selectedItems[0]) {
-                    navigate(path(`sources/${encodeURIComponent(selectedItems[0].id)}`));
+                    navigate(
+                      path(
+                        `sources/${encodeURIComponent(selectedItems[0].id)}`,
+                      ),
+                    );
                   }
                 }}
               >

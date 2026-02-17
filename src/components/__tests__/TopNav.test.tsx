@@ -26,7 +26,12 @@ const mockGet = apiClient.get as ReturnType<typeof vi.fn>;
 function renderTopNav(authenticated: boolean) {
   if (authenticated) {
     mockGet.mockResolvedValue({
-      data: { authenticated: true, name: "Test User", email: "test@example.com", roles: [] },
+      data: {
+        authenticated: true,
+        name: "Test User",
+        email: "test@example.com",
+        roles: [],
+      },
     });
   } else {
     mockGet.mockRejectedValue(new Error("Unauthorized"));
@@ -73,7 +78,9 @@ describe("TopNav", () => {
   it("shows utilities when authenticated", async () => {
     renderTopNav(true);
     await waitFor(() => {
-      expect(screen.getByRole("button", { name: "Light mode" })).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "Light mode" }),
+      ).toBeInTheDocument();
     });
   });
 
@@ -81,7 +88,9 @@ describe("TopNav", () => {
     renderTopNav(true);
     await waitFor(() => {
       // Cloudscape renders the dropdown trigger as a button with aria-label
-      expect(screen.getByRole("button", { name: "Test User" })).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "Test User" }),
+      ).toBeInTheDocument();
     });
   });
 });

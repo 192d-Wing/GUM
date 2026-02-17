@@ -38,16 +38,14 @@ impl Db {
 
         // Migration: add auth columns if they don't exist (for existing databases)
         let _ = sqlx::query(
-            "ALTER TABLE deployments ADD COLUMN auth_type TEXT NOT NULL DEFAULT 'none'"
+            "ALTER TABLE deployments ADD COLUMN auth_type TEXT NOT NULL DEFAULT 'none'",
         )
         .execute(&self.pool)
         .await;
 
-        let _ = sqlx::query(
-            "ALTER TABLE deployments ADD COLUMN auth_credential TEXT"
-        )
-        .execute(&self.pool)
-        .await;
+        let _ = sqlx::query("ALTER TABLE deployments ADD COLUMN auth_credential TEXT")
+            .execute(&self.pool)
+            .await;
 
         Ok(())
     }

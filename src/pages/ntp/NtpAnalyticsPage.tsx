@@ -35,7 +35,10 @@ export default function NtpAnalyticsPage() {
         items={clients.data ?? []}
         columnDefinitions={TOP_COLUMNS}
         header={
-          <Header variant="h2" description="Clients generating the most NTP requests">
+          <Header
+            variant="h2"
+            description="Clients generating the most NTP requests"
+          >
             Top clients
           </Header>
         }

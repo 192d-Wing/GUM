@@ -108,7 +108,10 @@ export default function ZoneDetailPage() {
       <BreadcrumbGroup
         items={[
           { text: "Zones", href: path("zones") },
-          { text: zone.name, href: path(`zones/${encodeURIComponent(zone.name)}`) },
+          {
+            text: zone.name,
+            href: path(`zones/${encodeURIComponent(zone.name)}`),
+          },
         ]}
         onFollow={(event) => {
           event.preventDefault();
@@ -163,8 +166,7 @@ export default function ZoneDetailPage() {
             {...propertyFilterProps}
             i18nStrings={{
               filteringAriaLabel: "Filter records",
-              filteringPlaceholder:
-                "Filter records by property or value",
+              filteringPlaceholder: "Filter records by property or value",
             }}
           />
         }

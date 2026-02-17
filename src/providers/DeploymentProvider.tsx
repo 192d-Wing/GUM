@@ -42,10 +42,7 @@ export function DeploymentProvider({
   }, []);
 
   const apiPrefix = useMemo(
-    () =>
-      deployment
-        ? `/api/v1/deployments/${deployment.id}/proxy`
-        : null,
+    () => (deployment ? `/api/v1/deployments/${deployment.id}/proxy` : null),
     [deployment],
   );
 

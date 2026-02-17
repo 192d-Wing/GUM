@@ -58,9 +58,7 @@ function ntpNavItems(base: string): SideNavigationProps.Item[] {
     {
       type: "section",
       text: "Security",
-      items: [
-        { type: "link", text: "Access control", href: `${base}/access` },
-      ],
+      items: [{ type: "link", text: "Access control", href: `${base}/access` }],
     },
     {
       type: "section",
@@ -92,9 +90,7 @@ export default function DeploymentShell() {
   if (isError || !deployment) {
     return (
       <Box textAlign="center" padding={{ top: "xxxl" }}>
-        <StatusIndicator type="error">
-          Deployment not found
-        </StatusIndicator>
+        <StatusIndicator type="error">Deployment not found</StatusIndicator>
       </Box>
     );
   }

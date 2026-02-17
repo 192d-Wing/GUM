@@ -1,13 +1,13 @@
-use std::sync::Arc;
+use axum::Router;
 use axum::body::Body;
 use axum::extract::{Path, State};
 use axum::http::{HeaderMap, Method};
 use axum::response::Response;
-use axum::Router;
+use std::sync::Arc;
 
+use crate::AppState;
 use crate::error::AppError;
 use crate::models::{Deployment, DeploymentAuthType};
-use crate::AppState;
 
 pub fn routes() -> Router<Arc<AppState>> {
     // Catch-all proxy: any method, any sub-path under /api/v1/deployments/:id/proxy/

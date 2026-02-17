@@ -82,16 +82,21 @@ export default function FleetAnalyticsPage() {
       <ColumnLayout columns={3} variant="text-grid">
         <Container header={<Header variant="h2">Deployments reporting</Header>}>
           <Box variant="awsui-value-large">
-            {(fleet?.healthy ?? 0) + (fleet?.degraded ?? 0)} / {fleet?.total ?? 0}
+            {(fleet?.healthy ?? 0) + (fleet?.degraded ?? 0)} /{" "}
+            {fleet?.total ?? 0}
           </Box>
         </Container>
         <Container header={<Header variant="h2">Service types</Header>}>
           <SpaceBetween direction="horizontal" size="xs">
             <Badge>
-              DNS: {fleet?.deployments.filter((d) => d.service_type === "crow_dns").length ?? 0}
+              DNS:{" "}
+              {fleet?.deployments.filter((d) => d.service_type === "crow_dns")
+                .length ?? 0}
             </Badge>
             <Badge>
-              NTP: {fleet?.deployments.filter((d) => d.service_type === "ntp").length ?? 0}
+              NTP:{" "}
+              {fleet?.deployments.filter((d) => d.service_type === "ntp")
+                .length ?? 0}
             </Badge>
           </SpaceBetween>
         </Container>

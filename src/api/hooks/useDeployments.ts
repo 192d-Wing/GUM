@@ -48,7 +48,11 @@ export function useCreateDeployment() {
 
 export function useUpdateDeployment() {
   const queryClient = useQueryClient();
-  return useMutation<Deployment, Error, { id: string; body: UpdateDeploymentRequest }>({
+  return useMutation<
+    Deployment,
+    Error,
+    { id: string; body: UpdateDeploymentRequest }
+  >({
     mutationFn: async ({ id, body }) => {
       const { data } = await apiClient.put<Deployment>(
         `/api/v1/deployments/${encodeURIComponent(id)}`,

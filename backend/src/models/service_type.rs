@@ -86,3 +86,115 @@ impl DeploymentAuthType {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // ServiceType tests
+    #[test]
+    fn service_type_from_str_crow_dns() {
+        assert_eq!(
+            ServiceType::from_str_value("crow_dns"),
+            Some(ServiceType::CrowDns)
+        );
+    }
+
+    #[test]
+    fn service_type_from_str_ntp() {
+        assert_eq!(ServiceType::from_str_value("ntp"), Some(ServiceType::Ntp));
+    }
+
+    #[test]
+    fn service_type_from_str_unknown() {
+        assert_eq!(ServiceType::from_str_value("postgres"), None);
+    }
+
+    #[test]
+    fn service_type_display_round_trips() {
+        assert_eq!(ServiceType::CrowDns.to_string(), "crow_dns");
+        assert_eq!(ServiceType::Ntp.to_string(), "ntp");
+    }
+
+    #[test]
+    fn service_type_serde_round_trip() {
+        let json = serde_json::to_value(ServiceType::CrowDns).unwrap();
+        assert_eq!(json, serde_json::json!("crow_dns"));
+        let back: ServiceType = serde_json::from_value(serde_json::json!("ntp")).unwrap();
+        assert_eq!(back, ServiceType::Ntp);
+    }
+
+    // HealthStatus tests
+    #[test]
+    fn health_status_from_str_known() {
+        assert_eq!(
+            HealthStatus::from_str_value("healthy"),
+            HealthStatus::Healthy
+        );
+        assert_eq!(
+            HealthStatus::from_str_value("degraded"),
+            HealthStatus::Degraded
+        );
+        assert_eq!(
+            HealthStatus::from_str_value("unhealthy"),
+            HealthStatus::Unhealthy
+        );
+    }
+
+    #[test]
+    fn health_status_from_str_unknown_default() {
+        assert_eq!(
+            HealthStatus::from_str_value("garbage"),
+            HealthStatus::Unknown
+        );
+        assert_eq!(HealthStatus::from_str_value(""), HealthStatus::Unknown);
+    }
+
+    #[test]
+    fn health_status_display() {
+        assert_eq!(HealthStatus::Healthy.to_string(), "healthy");
+        assert_eq!(HealthStatus::Degraded.to_string(), "degraded");
+        assert_eq!(HealthStatus::Unhealthy.to_string(), "unhealthy");
+        assert_eq!(HealthStatus::Unknown.to_string(), "unknown");
+    }
+
+    #[test]
+    fn health_status_serde_round_trip() {
+        let json = serde_json::to_value(HealthStatus::Healthy).unwrap();
+        assert_eq!(json, serde_json::json!("healthy"));
+        let back: HealthStatus = serde_json::from_value(serde_json::json!("unknown")).unwrap();
+        assert_eq!(back, HealthStatus::Unknown);
+    }
+
+    // DeploymentAuthType tests
+    #[test]
+    fn auth_type_from_str_known() {
+        assert_eq!(
+            DeploymentAuthType::from_str_value("bearer_token"),
+            DeploymentAuthType::BearerToken
+        );
+        assert_eq!(
+            DeploymentAuthType::from_str_value("basic_auth"),
+            DeploymentAuthType::BasicAuth
+        );
+    }
+
+    #[test]
+    fn auth_type_from_str_unknown_default() {
+        assert_eq!(
+            DeploymentAuthType::from_str_value("unknown"),
+            DeploymentAuthType::None
+        );
+        assert_eq!(
+            DeploymentAuthType::from_str_value(""),
+            DeploymentAuthType::None
+        );
+    }
+
+    #[test]
+    fn auth_type_display() {
+        assert_eq!(DeploymentAuthType::None.to_string(), "none");
+        assert_eq!(DeploymentAuthType::BearerToken.to_string(), "bearer_token");
+        assert_eq!(DeploymentAuthType::BasicAuth.to_string(), "basic_auth");
+    }
+}

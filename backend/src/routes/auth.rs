@@ -1,4 +1,3 @@
-use std::sync::Arc;
 use axum::extract::{Query, State};
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Redirect, Response};
@@ -7,9 +6,10 @@ use axum::{Json, Router};
 use axum_extra::extract::CookieJar;
 use serde::Deserialize;
 use serde_json::json;
+use std::sync::Arc;
 
-use crate::auth::session::Session;
 use crate::AppState;
+use crate::auth::session::Session;
 
 pub const SESSION_COOKIE: &str = "gum_session";
 
@@ -22,10 +22,7 @@ pub fn routes() -> Router<Arc<AppState>> {
 }
 
 /// GET /api/v1/auth/me — Returns the current user from session cookie.
-async fn auth_me(
-    State(state): State<Arc<AppState>>,
-    jar: CookieJar,
-) -> Response {
+async fn auth_me(State(state): State<Arc<AppState>>, jar: CookieJar) -> Response {
     match extract_session(&jar, &state.session_key) {
         Some(session) => Json(json!({
             "authenticated": true,
@@ -47,10 +44,13 @@ async fn auth_me(
                 }))
                 .into_response();
             }
-            (StatusCode::UNAUTHORIZED, Json(json!({
-                "authenticated": false,
-                "error": "not authenticated",
-            })))
+            (
+                StatusCode::UNAUTHORIZED,
+                Json(json!({
+                    "authenticated": false,
+                    "error": "not authenticated",
+                })),
+            )
                 .into_response()
         }
     }
@@ -58,13 +58,8 @@ async fn auth_me(
 
 /// POST /api/v1/auth/logout — Clears the session cookie.
 async fn auth_logout() -> impl IntoResponse {
-    let cookie = format!(
-        "{SESSION_COOKIE}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0"
-    );
-    (
-        [("set-cookie", cookie)],
-        Json(json!({ "success": true })),
-    )
+    let cookie = format!("{SESSION_COOKIE}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0");
+    ([("set-cookie", cookie)], Json(json!({ "success": true })))
 }
 
 /// GET /api/v1/auth/oidc/login — Redirects to the OIDC provider's authorization endpoint.
@@ -84,19 +79,11 @@ async fn oidc_login(State(state): State<Arc<AppState>>) -> Response {
     let csrf_state = uuid::Uuid::new_v4().to_string();
     let nonce = uuid::Uuid::new_v4().to_string();
 
-    let auth_url = crate::auth::oidc::build_auth_url(
-        metadata,
-        &state.config.oidc,
-        &csrf_state,
-        &nonce,
-    );
+    let auth_url =
+        crate::auth::oidc::build_auth_url(metadata, &state.config.oidc, &csrf_state, &nonce);
 
     // Store nonce keyed by CSRF token for the callback
-    state
-        .oidc_pending
-        .write()
-        .await
-        .insert(csrf_state, nonce);
+    state.oidc_pending.write().await.insert(csrf_state, nonce);
 
     Redirect::temporary(&auth_url).into_response()
 }
@@ -168,20 +155,18 @@ async fn oidc_callback(
         }
     };
 
-    let user_info = match crate::auth::oidc::extract_user_info(
-        id_token,
-        &state.config.oidc.roles_claim,
-    ) {
-        Ok(info) => info,
-        Err(e) => {
-            tracing::error!("Failed to extract user info from id_token: {e}");
-            return (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({ "error": "failed to parse id_token" })),
-            )
-                .into_response();
-        }
-    };
+    let user_info =
+        match crate::auth::oidc::extract_user_info(id_token, &state.config.oidc.roles_claim) {
+            Ok(info) => info,
+            Err(e) => {
+                tracing::error!("Failed to extract user info from id_token: {e}");
+                return (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(json!({ "error": "failed to parse id_token" })),
+                )
+                    .into_response();
+            }
+        };
 
     tracing::info!(
         sub = %user_info.sub,
@@ -211,14 +196,9 @@ async fn oidc_callback(
     };
 
     // Set httpOnly cookie and redirect to frontend
-    let cookie = format!(
-        "{SESSION_COOKIE}={cookie_value}; Path=/; HttpOnly; SameSite=Lax; Max-Age=28800"
-    );
-    (
-        [("set-cookie", cookie)],
-        Redirect::temporary("/"),
-    )
-        .into_response()
+    let cookie =
+        format!("{SESSION_COOKIE}={cookie_value}; Path=/; HttpOnly; SameSite=Lax; Max-Age=28800");
+    ([("set-cookie", cookie)], Redirect::temporary("/")).into_response()
 }
 
 /// Extract and validate session from cookie jar.
