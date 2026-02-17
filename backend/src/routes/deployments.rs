@@ -137,7 +137,29 @@ async fn update_deployment(
             }
         }
     }
+
+    let old = Deployment::get(&state.db.pool, &id).await?;
     let deployment = Deployment::update(&state.db.pool, &id, req).await?;
+
+    let mut changes = serde_json::Map::new();
+    if old.name != deployment.name {
+        changes.insert(
+            "name".into(),
+            serde_json::json!({"old": old.name, "new": deployment.name}),
+        );
+    }
+    if old.endpoint_url != deployment.endpoint_url {
+        changes.insert(
+            "endpoint_url".into(),
+            serde_json::json!({"old": old.endpoint_url, "new": deployment.endpoint_url}),
+        );
+    }
+    if old.tags != deployment.tags {
+        changes.insert(
+            "tags".into(),
+            serde_json::json!({"old": old.tags, "new": deployment.tags}),
+        );
+    }
 
     AuditLog::record(
         &state.db.pool,
@@ -147,7 +169,7 @@ async fn update_deployment(
         "deployment",
         &id,
         &deployment.name,
-        &serde_json::json!({}),
+        &serde_json::Value::Object(changes),
     )
     .await
     .ok();
@@ -175,7 +197,11 @@ async fn delete_deployment(
         "deployment",
         &id,
         &name,
-        &serde_json::json!({}),
+        &serde_json::json!({
+            "service_type": deployment.service_type.to_string(),
+            "endpoint_url": deployment.endpoint_url,
+            "tags": deployment.tags,
+        }),
     )
     .await
     .ok();

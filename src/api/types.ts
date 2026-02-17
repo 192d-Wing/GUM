@@ -70,6 +70,11 @@ export interface AuditLog {
   details: Record<string, unknown>;
 }
 
+export interface AuditLogPage {
+  items: AuditLog[];
+  total: number;
+}
+
 // =====================================================================
 // Crow DNS types (mirroring crow-server/src/api/)
 // =====================================================================

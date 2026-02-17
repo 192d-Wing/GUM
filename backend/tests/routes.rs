@@ -300,7 +300,8 @@ async fn create_deployment_generates_audit_log() {
     let (status, json) = send(app, req).await;
     assert_eq!(status, StatusCode::OK);
 
-    let logs = json.as_array().unwrap();
+    let logs = json["items"].as_array().unwrap();
+    assert_eq!(json["total"], 1);
     assert_eq!(logs.len(), 1);
     assert_eq!(logs[0]["action"], "create");
     assert_eq!(logs[0]["resource_name"], "audited-create");
@@ -327,7 +328,8 @@ async fn delete_deployment_generates_audit_log() {
     let (status, json) = send(app, req).await;
     assert_eq!(status, StatusCode::OK);
 
-    let logs = json.as_array().unwrap();
+    let logs = json["items"].as_array().unwrap();
+    assert_eq!(json["total"], 1);
     assert_eq!(logs.len(), 1);
     assert_eq!(logs[0]["action"], "delete");
     assert_eq!(logs[0]["resource_name"], "audited-delete");
@@ -590,7 +592,8 @@ async fn admin_can_view_audit_logs() {
         .unwrap();
     let (status, json) = send(app, req).await;
     assert_eq!(status, StatusCode::OK);
-    assert!(json.is_array());
+    assert!(json["items"].is_array());
+    assert!(json["total"].is_number());
 }
 
 #[tokio::test]

@@ -2,13 +2,18 @@ import { useState } from "react";
 import Table from "@cloudscape-design/components/table";
 import Header from "@cloudscape-design/components/header";
 import TextFilter from "@cloudscape-design/components/text-filter";
+import Pagination from "@cloudscape-design/components/pagination";
 import SpaceBetween from "@cloudscape-design/components/space-between";
 import Container from "@cloudscape-design/components/container";
 import ColumnLayout from "@cloudscape-design/components/column-layout";
 import Box from "@cloudscape-design/components/box";
 import { useCollection } from "@cloudscape-design/collection-hooks";
 import { useAuditLogs } from "../api/hooks/useAuditLogs";
+import { useIsAdmin } from "../hooks/useAuthorization";
+import ForbiddenPage from "./ForbiddenPage";
 import type { AuditLog } from "../api/types";
+
+const PAGE_SIZE = 50;
 
 const COLUMN_DEFINITIONS = [
   {
@@ -48,7 +53,13 @@ const COLUMN_DEFINITIONS = [
   },
 ];
 
-function DetailField({ label, children }: { label: string; children: React.ReactNode }) {
+function DetailField({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
   return (
     <div>
       <Box variant="awsui-key-label">{label}</Box>
@@ -58,7 +69,14 @@ function DetailField({ label, children }: { label: string; children: React.React
 }
 
 export default function AuditLogsPage() {
-  const { data: logs = [], isLoading } = useAuditLogs();
+  const isAdmin = useIsAdmin();
+  const [currentPage, setCurrentPage] = useState(1);
+  const { data, isLoading } = useAuditLogs({
+    limit: PAGE_SIZE,
+    offset: (currentPage - 1) * PAGE_SIZE,
+  });
+  const logs = data?.items ?? [];
+  const total = data?.total ?? 0;
   const [selectedItems, setSelectedItems] = useState<AuditLog[]>([]);
 
   const { items, filterProps, collectionProps } = useCollection(logs, {
@@ -81,7 +99,10 @@ export default function AuditLogsPage() {
     },
   });
 
+  if (!isAdmin) return <ForbiddenPage />;
+
   const selected = selectedItems[0];
+  const pageCount = Math.ceil(total / PAGE_SIZE);
 
   return (
     <SpaceBetween size="l">
@@ -99,14 +120,27 @@ export default function AuditLogsPage() {
         header={
           <Header
             variant="h1"
-            counter={`(${logs.length})`}
+            counter={`(${total})`}
             description="Activity log for deployment operations"
           >
             Audit logs
           </Header>
         }
         filter={
-          <TextFilter {...filterProps} filteringPlaceholder="Filter audit logs" />
+          <TextFilter
+            {...filterProps}
+            filteringPlaceholder="Filter audit logs"
+          />
+        }
+        pagination={
+          <Pagination
+            currentPageIndex={currentPage}
+            pagesCount={pageCount}
+            onChange={({ detail }) => {
+              setCurrentPage(detail.currentPageIndex);
+              setSelectedItems([]);
+            }}
+          />
         }
         stickyHeader
         variant="full-page"
@@ -122,9 +156,13 @@ export default function AuditLogsPage() {
             <DetailField label="Actor">{selected.actor_name}</DetailField>
             <DetailField label="Actor ID">{selected.actor_sub}</DetailField>
             <DetailField label="Action">{selected.action}</DetailField>
-            <DetailField label="Resource type">{selected.resource_type}</DetailField>
+            <DetailField label="Resource type">
+              {selected.resource_type}
+            </DetailField>
             <DetailField label="Resource">{selected.resource_name}</DetailField>
-            <DetailField label="Resource ID">{selected.resource_id}</DetailField>
+            <DetailField label="Resource ID">
+              {selected.resource_id}
+            </DetailField>
           </ColumnLayout>
           {Object.keys(selected.details).length > 0 && (
             <Box margin={{ top: "l" }}>

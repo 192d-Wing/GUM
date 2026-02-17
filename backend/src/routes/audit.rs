@@ -6,7 +6,7 @@ use std::sync::Arc;
 use crate::AppState;
 use crate::auth::session::Session;
 use crate::error::AppError;
-use crate::models::{AuditLog, AuditLogQuery};
+use crate::models::{AuditLog, AuditLogPage, AuditLogQuery};
 
 pub fn routes() -> Router<Arc<AppState>> {
     Router::new().route("/api/v1/audit-logs", get(list_audit_logs))
@@ -16,8 +16,8 @@ async fn list_audit_logs(
     State(state): State<Arc<AppState>>,
     Extension(session): Extension<Session>,
     Query(query): Query<AuditLogQuery>,
-) -> Result<Json<Vec<AuditLog>>, AppError> {
+) -> Result<Json<AuditLogPage>, AppError> {
     session.require_admin()?;
-    let logs = AuditLog::list(&state.db.pool, &query).await?;
-    Ok(Json(logs))
+    let page = AuditLog::list(&state.db.pool, &query).await?;
+    Ok(Json(page))
 }

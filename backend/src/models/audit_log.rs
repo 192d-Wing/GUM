@@ -3,6 +3,12 @@ use sqlx::SqlitePool;
 
 use crate::error::AppError;
 
+#[derive(Debug, Serialize)]
+pub struct AuditLogPage {
+    pub items: Vec<AuditLog>,
+    pub total: i64,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AuditLog {
     pub id: String,
@@ -60,39 +66,50 @@ impl AuditLog {
         Ok(())
     }
 
-    pub async fn list(pool: &SqlitePool, query: &AuditLogQuery) -> Result<Vec<AuditLog>, AppError> {
+    pub async fn list(pool: &SqlitePool, query: &AuditLogQuery) -> Result<AuditLogPage, AppError> {
         let limit = query.limit.unwrap_or(50).min(200);
         let offset = query.offset.unwrap_or(0);
 
-        // Build dynamic query
-        let mut sql = String::from(
-            "SELECT id, timestamp, actor_sub, actor_name, action, resource_type, resource_id, resource_name, details FROM audit_logs WHERE 1=1",
-        );
+        // Build dynamic filter clause
+        let mut where_clause = String::from(" WHERE 1=1");
         let mut binds: Vec<String> = Vec::new();
 
         if let Some(ref actor) = query.actor {
-            sql.push_str(" AND actor_sub = ?");
+            where_clause.push_str(" AND actor_sub = ?");
             binds.push(actor.clone());
         }
         if let Some(ref action) = query.action {
-            sql.push_str(" AND action = ?");
+            where_clause.push_str(" AND action = ?");
             binds.push(action.clone());
         }
         if let Some(ref resource_id) = query.resource_id {
-            sql.push_str(" AND resource_id = ?");
+            where_clause.push_str(" AND resource_id = ?");
             binds.push(resource_id.clone());
         }
 
-        sql.push_str(" ORDER BY timestamp DESC LIMIT ? OFFSET ?");
+        // Count total matching rows
+        let count_sql = format!("SELECT COUNT(*) FROM audit_logs{where_clause}");
+        let mut count_q = sqlx::query_scalar::<_, i64>(&count_sql);
+        for b in &binds {
+            count_q = count_q.bind(b);
+        }
+        let total = count_q.fetch_one(pool).await?;
 
-        let mut q = sqlx::query_as::<_, AuditLogRow>(&sql);
+        // Fetch page
+        let select_sql = format!(
+            "SELECT id, timestamp, actor_sub, actor_name, action, resource_type, resource_id, resource_name, details FROM audit_logs{where_clause} ORDER BY timestamp DESC LIMIT ? OFFSET ?"
+        );
+        let mut q = sqlx::query_as::<_, AuditLogRow>(&select_sql);
         for b in &binds {
             q = q.bind(b);
         }
         q = q.bind(limit).bind(offset);
 
         let rows = q.fetch_all(pool).await?;
-        Ok(rows.into_iter().map(|r| r.into()).collect())
+        Ok(AuditLogPage {
+            items: rows.into_iter().map(|r| r.into()).collect(),
+            total,
+        })
     }
 }
 
@@ -154,7 +171,7 @@ mod tests {
         .await
         .unwrap();
 
-        let logs = AuditLog::list(
+        let page = AuditLog::list(
             &pool,
             &AuditLogQuery {
                 limit: None,
@@ -167,11 +184,12 @@ mod tests {
         .await
         .unwrap();
 
-        assert_eq!(logs.len(), 1);
-        assert_eq!(logs[0].actor_sub, "user-1");
-        assert_eq!(logs[0].action, "create");
-        assert_eq!(logs[0].resource_id, "dep-123");
-        assert_eq!(logs[0].resource_name, "prod-dns");
+        assert_eq!(page.total, 1);
+        assert_eq!(page.items.len(), 1);
+        assert_eq!(page.items[0].actor_sub, "user-1");
+        assert_eq!(page.items[0].action, "create");
+        assert_eq!(page.items[0].resource_id, "dep-123");
+        assert_eq!(page.items[0].resource_name, "prod-dns");
     }
 
     #[tokio::test]
@@ -202,7 +220,7 @@ mod tests {
         .await
         .unwrap();
 
-        let logs = AuditLog::list(
+        let page = AuditLog::list(
             &pool,
             &AuditLogQuery {
                 limit: None,
@@ -215,7 +233,8 @@ mod tests {
         .await
         .unwrap();
 
-        assert_eq!(logs.len(), 1);
-        assert_eq!(logs[0].action, "delete");
+        assert_eq!(page.total, 1);
+        assert_eq!(page.items.len(), 1);
+        assert_eq!(page.items[0].action, "delete");
     }
 }
