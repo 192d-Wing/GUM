@@ -1,7 +1,10 @@
 use axum::Router;
+use axum::extract::DefaultBodyLimit;
 use std::sync::Arc;
 use tokio::sync::RwLock;
+use tower_http::catch_panic::CatchPanicLayer;
 use tower_http::cors::{Any, CorsLayer};
+use tower_http::set_header::SetResponseHeaderLayer;
 use tower_http::trace::TraceLayer;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
@@ -71,13 +74,56 @@ async fn main() {
         tracing::info!("Health poller started (interval: {}s)", interval_secs);
     }
 
-    let cors = CorsLayer::new()
-        .allow_origin(Any)
-        .allow_methods(Any)
-        .allow_headers(Any);
+    // CORS: restrict origins when configured, allow all in dev mode
+    let cors = if config.allowed_origins.is_empty() {
+        tracing::warn!("No allowed_origins configured — CORS allows all origins (dev mode)");
+        CorsLayer::new()
+            .allow_origin(Any)
+            .allow_methods(Any)
+            .allow_headers(Any)
+    } else {
+        let origins: Vec<_> = config
+            .allowed_origins
+            .iter()
+            .filter_map(|o| o.parse().ok())
+            .collect();
+        tracing::info!("CORS allowed origins: {:?}", config.allowed_origins);
+        CorsLayer::new()
+            .allow_origin(origins)
+            .allow_methods([
+                axum::http::Method::GET,
+                axum::http::Method::POST,
+                axum::http::Method::PUT,
+                axum::http::Method::DELETE,
+                axum::http::Method::OPTIONS,
+            ])
+            .allow_headers([
+                axum::http::header::CONTENT_TYPE,
+                axum::http::header::AUTHORIZATION,
+                axum::http::header::ACCEPT,
+            ])
+            .allow_credentials(true)
+    };
 
     let mut app = Router::new()
         .merge(routes::api_routes(state.clone()))
+        // Global body size limit (proxy has its own 10 MiB limit)
+        .layer(DefaultBodyLimit::max(config.max_body_size))
+        // Security headers
+        .layer(SetResponseHeaderLayer::overriding(
+            axum::http::header::X_CONTENT_TYPE_OPTIONS,
+            axum::http::HeaderValue::from_static("nosniff"),
+        ))
+        .layer(SetResponseHeaderLayer::overriding(
+            axum::http::header::X_FRAME_OPTIONS,
+            axum::http::HeaderValue::from_static("DENY"),
+        ))
+        .layer(SetResponseHeaderLayer::overriding(
+            axum::http::header::HeaderName::from_static("x-xss-protection"),
+            axum::http::HeaderValue::from_static("1; mode=block"),
+        ))
+        // Catch panics so a single bad request can't crash the server
+        .layer(CatchPanicLayer::new())
         .layer(TraceLayer::new_for_http())
         .layer(cors)
         .with_state(state);

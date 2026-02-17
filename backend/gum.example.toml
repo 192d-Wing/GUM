@@ -30,6 +30,16 @@ static_dir = ""
 # health endpoint. Set to 0 to disable polling.
 health_poll_interval = 30
 
+# ─── Security ────────────────────────────────────────────────────────
+# Allowed CORS origins. When empty (default), all origins are allowed
+# (suitable for development). In production, list your frontend URL(s).
+# Example: allowed_origins = ["https://gum.example.com"]
+allowed_origins = []
+
+# Maximum request body size in bytes (default: 2 MiB = 2097152).
+# The proxy endpoint uses its own 10 MiB limit regardless of this setting.
+max_body_size = 2097152
+
 # ─── OIDC / SSO ──────────────────────────────────────────────────────
 # When OIDC is disabled (default), GUM runs in "stub auth" mode where
 # all users are treated as an admin. Enable OIDC for real authentication.

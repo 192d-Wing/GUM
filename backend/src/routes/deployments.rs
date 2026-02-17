@@ -40,14 +40,46 @@ async fn create_deployment(
     State(state): State<Arc<AppState>>,
     Json(req): Json<CreateDeploymentRequest>,
 ) -> Result<Json<Deployment>, AppError> {
-    if req.name.is_empty() {
-        return Err(AppError::BadRequest("name is required".into()));
-    }
-    if req.endpoint_url.is_empty() {
-        return Err(AppError::BadRequest("endpoint_url is required".into()));
-    }
+    validate_deployment_input(&req.name, &req.endpoint_url, &req.tags)?;
     let deployment = Deployment::create(&state.db.pool, req).await?;
     Ok(Json(deployment))
+}
+
+/// Shared validation for deployment create/update.
+fn validate_deployment_input(
+    name: &str,
+    endpoint_url: &str,
+    tags: &std::collections::HashMap<String, String>,
+) -> Result<(), AppError> {
+    let name = name.trim();
+    if name.is_empty() {
+        return Err(AppError::BadRequest("name is required".into()));
+    }
+    if name.len() > 255 {
+        return Err(AppError::BadRequest(
+            "name must be 255 characters or fewer".into(),
+        ));
+    }
+    let url = endpoint_url.trim();
+    if url.is_empty() {
+        return Err(AppError::BadRequest("endpoint_url is required".into()));
+    }
+    if !url.starts_with("http://") && !url.starts_with("https://") {
+        return Err(AppError::BadRequest(
+            "endpoint_url must start with http:// or https://".into(),
+        ));
+    }
+    if tags.len() > 50 {
+        return Err(AppError::BadRequest("too many tags (max 50)".into()));
+    }
+    for (k, v) in tags {
+        if k.len() > 128 || v.len() > 256 {
+            return Err(AppError::BadRequest(
+                "tag keys must be ≤128 chars and values ≤256 chars".into(),
+            ));
+        }
+    }
+    Ok(())
 }
 
 async fn update_deployment(
@@ -55,6 +87,37 @@ async fn update_deployment(
     Path(id): Path<String>,
     Json(req): Json<UpdateDeploymentRequest>,
 ) -> Result<Json<Deployment>, AppError> {
+    // Validate provided fields
+    if let Some(ref name) = req.name {
+        if name.trim().is_empty() {
+            return Err(AppError::BadRequest("name cannot be empty".into()));
+        }
+        if name.len() > 255 {
+            return Err(AppError::BadRequest(
+                "name must be 255 characters or fewer".into(),
+            ));
+        }
+    }
+    if let Some(ref url) = req.endpoint_url
+        && !url.starts_with("http://")
+        && !url.starts_with("https://")
+    {
+        return Err(AppError::BadRequest(
+            "endpoint_url must start with http:// or https://".into(),
+        ));
+    }
+    if let Some(ref tags) = req.tags {
+        if tags.len() > 50 {
+            return Err(AppError::BadRequest("too many tags (max 50)".into()));
+        }
+        for (k, v) in tags {
+            if k.len() > 128 || v.len() > 256 {
+                return Err(AppError::BadRequest(
+                    "tag keys must be ≤128 chars and values ≤256 chars".into(),
+                ));
+            }
+        }
+    }
     let deployment = Deployment::update(&state.db.pool, &id, req).await?;
     Ok(Json(deployment))
 }

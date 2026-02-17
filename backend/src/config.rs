@@ -21,6 +21,13 @@ pub struct AppConfig {
     /// Health polling interval in seconds. 0 = disabled.
     #[serde(default = "default_health_poll_interval")]
     pub health_poll_interval: u64,
+    /// Allowed CORS origins. Empty list = allow all (dev mode).
+    /// Example: ["https://gum.example.com"]
+    #[serde(default)]
+    pub allowed_origins: Vec<String>,
+    /// Maximum request body size in bytes. Defaults to 2 MiB.
+    #[serde(default = "default_max_body_size")]
+    pub max_body_size: usize,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -75,6 +82,9 @@ fn default_database_url() -> String {
 fn default_health_poll_interval() -> u64 {
     30
 }
+fn default_max_body_size() -> usize {
+    2 * 1024 * 1024 // 2 MiB
+}
 fn default_redirect_uri() -> String {
     "http://localhost:4000/api/v1/auth/oidc/callback".into()
 }
@@ -106,6 +116,8 @@ impl AppConfig {
                 session_secret: String::new(),
                 static_dir: String::new(),
                 health_poll_interval: default_health_poll_interval(),
+                allowed_origins: Vec::new(),
+                max_body_size: default_max_body_size(),
             })
         }
     }
@@ -154,6 +166,8 @@ mod tests {
             session_secret: "my-secret-key".into(),
             static_dir: String::new(),
             health_poll_interval: 30,
+            allowed_origins: Vec::new(),
+            max_body_size: default_max_body_size(),
         };
         assert_eq!(config.session_key(), b"my-secret-key".to_vec());
     }
@@ -168,6 +182,8 @@ mod tests {
             session_secret: String::new(),
             static_dir: String::new(),
             health_poll_interval: 30,
+            allowed_origins: Vec::new(),
+            max_body_size: default_max_body_size(),
         };
         let key = config.session_key();
         assert_eq!(key.len(), 32);

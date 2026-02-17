@@ -22,6 +22,8 @@ async fn test_app() -> (Router, Arc<AppState>) {
         session_secret: "test-secret-key-32-bytes-long!!!".into(),
         static_dir: String::new(),
         health_poll_interval: 0,
+        allowed_origins: Vec::new(),
+        max_body_size: 2 * 1024 * 1024,
     };
 
     let state = Arc::new(AppState {
